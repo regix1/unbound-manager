@@ -1,5 +1,6 @@
 """Troubleshooting tools for Unbound."""
 
+import sys
 import time
 from pathlib import Path
 from typing import List, Dict, Any
@@ -185,7 +186,7 @@ class Troubleshooter:
             for line in result.stdout.split('\n'):
                 if '=' in line:
                     key, value = line.split('=', 1)
-                    stats[key] = value
+                    stats[key] = value.strip()
             
             # Create statistics table
             table = Table(title="Query Statistics", title_style="bold cyan")
@@ -215,13 +216,159 @@ class Troubleshooter:
                 hit_rate = (hits / queries) * 100
                 console.print(f"\n[cyan]Cache Hit Rate:[/cyan] [green]{hit_rate:.2f}%[/green]")
             
-            # Show memory usage
-            console.print(f"\n[cyan]Memory Usage:[/cyan]")
-            console.print(f"  Message Cache: {stats.get('mem.cache.message', 'N/A')} bytes")
-            console.print(f"  RRset Cache: {stats.get('mem.cache.rrset', 'N/A')} bytes")
+            # Show memory usage with better handling
+            self._show_memory_stats(stats)
+            
+            # Show thread statistics if available
+            self._show_thread_stats(stats)
             
         except Exception as e:
             console.print(f"[red]Error getting statistics: {e}[/red]")
+    
+    def _show_memory_stats(self, stats: Dict[str, str]) -> None:
+        """Display memory statistics in a readable format."""
+        console.print(f"\n[cyan]Memory Usage:[/cyan]")
+        
+        # Try different memory stat keys that might exist
+        memory_keys = [
+            ("mem.cache.message", "Message Cache"),
+            ("mem.cache.rrset", "RRset Cache"),
+            ("mem.total.sbrk", "Total Memory (sbrk)"),
+            ("mem.mod.iterator", "Iterator Module"),
+            ("mem.mod.validator", "Validator Module"),
+            ("mem.mod.respip", "Response IP Module"),
+            ("mem.streamwait", "Stream Wait"),
+            ("mem.http.query_buffer", "HTTP Query Buffer"),
+        ]
+        
+        memory_found = False
+        for key, label in memory_keys:
+            if key in stats:
+                try:
+                    bytes_val = int(stats[key])
+                    if bytes_val > 0:
+                        memory_found = True
+                        size = self._format_bytes(bytes_val)
+                        console.print(f"  {label}: {size}")
+                except (ValueError, TypeError):
+                    # Some memory values might not be integers
+                    if stats[key] and stats[key] != "0":
+                        memory_found = True
+                        console.print(f"  {label}: {stats[key]}")
+        
+        if not memory_found:
+            # Try to show any memory-related stats
+            any_mem_stats = False
+            for key, value in stats.items():
+                if 'mem.' in key and value != "0":
+                    if not any_mem_stats:
+                        console.print("  [yellow]Available memory statistics:[/yellow]")
+                        any_mem_stats = True
+                    # Format the key nicely
+                    formatted_key = key.replace('mem.', '').replace('.', ' ').replace('_', ' ').title()
+                    try:
+                        bytes_val = int(value)
+                        console.print(f"  {formatted_key}: {self._format_bytes(bytes_val)}")
+                    except ValueError:
+                        console.print(f"  {formatted_key}: {value}")
+            
+            if not any_mem_stats:
+                console.print("  [yellow]Memory statistics not available in current Unbound version[/yellow]")
+                console.print("  [dim]Try running with more verbosity or check Unbound compilation options[/dim]")
+    
+    def _show_thread_stats(self, stats: Dict[str, str]) -> None:
+        """Display thread statistics if available."""
+        thread_stats = []
+        for key, value in stats.items():
+            if key.startswith("thread") and value != "0":
+                thread_stats.append((key, value))
+        
+        if thread_stats:
+            console.print(f"\n[cyan]Thread Statistics:[/cyan]")
+            for key, value in thread_stats[:5]:  # Show first 5 thread stats
+                formatted_key = key.replace('thread', 'Thread ').replace('.', ' ').replace('_', ' ').title()
+                console.print(f"  {formatted_key}: {value}")
+    
+    def _format_bytes(self, bytes_value: int) -> str:
+        """Format bytes to human readable string."""
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if bytes_value < 1024.0:
+                return f"{bytes_value:.2f} {unit}"
+            bytes_value /= 1024.0
+        return f"{bytes_value:.2f} PB"
+    
+    def show_extended_statistics(self) -> None:
+        """Show all available Unbound statistics for debugging."""
+        console.print(Panel.fit(
+            "[bold cyan]Extended Unbound Statistics[/bold cyan]",
+            border_style="cyan"
+        ))
+        
+        try:
+            # Use stats_noreset to not reset counters
+            result = run_command(["unbound-control", "stats_noreset"], check=False)
+            
+            if result.returncode != 0:
+                # Fallback to regular stats
+                result = run_command(["unbound-control", "stats"], check=False)
+                
+            if result.returncode != 0:
+                console.print("[red]Could not retrieve statistics[/red]")
+                return
+            
+            # Parse and categorize statistics
+            categories = {
+                "Query Statistics": [],
+                "Cache Statistics": [],
+                "Memory Statistics": [],
+                "Thread Statistics": [],
+                "Time Statistics": [],
+                "DNS Response Codes": [],
+                "Other Statistics": []
+            }
+            
+            for line in result.stdout.split('\n'):
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    value = value.strip()
+                    
+                    # Skip zero values for cleaner output (optional)
+                    if value == "0" or value == "0.000000":
+                        continue
+                    
+                    # Categorize
+                    if "num.queries" in key or "num.answer" in key:
+                        categories["Query Statistics"].append((key, value))
+                    elif "cache" in key:
+                        categories["Cache Statistics"].append((key, value))
+                    elif "mem." in key:
+                        categories["Memory Statistics"].append((key, value))
+                    elif "thread" in key:
+                        categories["Thread Statistics"].append((key, value))
+                    elif "time" in key:
+                        categories["Time Statistics"].append((key, value))
+                    elif "rcode" in key:
+                        categories["DNS Response Codes"].append((key, value))
+                    else:
+                        categories["Other Statistics"].append((key, value))
+            
+            # Display each category
+            for category, items in categories.items():
+                if items:
+                    console.print(f"\n[cyan]{category}:[/cyan]")
+                    for key, value in sorted(items)[:10]:  # Limit to 10 items per category
+                        # Format the key for readability
+                        formatted_key = key.replace(".", " ").replace("_", " ").title()
+                        # Truncate long keys
+                        if len(formatted_key) > 40:
+                            formatted_key = formatted_key[:37] + "..."
+                        console.print(f"  {formatted_key}: {value}")
+                    
+                    if len(items) > 10:
+                        console.print(f"  [dim]... and {len(items) - 10} more[/dim]")
+                        
+        except Exception as e:
+            console.print(f"[red]Error getting extended statistics: {e}[/red]")
     
     def check_connectivity(self) -> None:
         """Check network connectivity."""
