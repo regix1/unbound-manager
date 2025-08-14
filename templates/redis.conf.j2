@@ -1,0 +1,12 @@
+cachedb:
+    # Redis backend configuration
+    backend: redis
+    
+    # Redis connection via Unix socket
+    redis-server-path: "/var/run/redis/redis.sock"
+    
+    # Redis timeout in milliseconds
+    redis-timeout: 500
+    
+    # Don't expire records in Redis (let Redis handle it)
+    redis-expire-records: no

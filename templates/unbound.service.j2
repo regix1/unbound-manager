@@ -1,0 +1,33 @@
+[Unit]
+Description=Unbound DNS server
+Documentation=man:unbound(8)
+After=network.target redis-server.service
+Wants=nss-lookup.target
+Before=nss-lookup.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=-/etc/default/unbound
+
+# Check configuration before starting
+ExecStartPre=/usr/sbin/unbound-checkconf
+
+# Start Unbound in foreground mode
+ExecStart=/usr/sbin/unbound -d
+
+# Reload configuration
+ExecReload=/usr/sbin/unbound-control reload
+
+# PID file
+PIDFile=/run/unbound.pid
+
+# Security settings
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/etc/unbound /var/lib/unbound /run
+
+[Install]
+WantedBy=multi-user.target

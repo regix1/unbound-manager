@@ -1,0 +1,14 @@
+server:
+    # DNSSEC Configuration
+    auto-trust-anchor-file: "/etc/unbound/root.key"
+    val-clean-additional: yes
+    val-permissive-mode: no
+    trust-anchor-signaling: yes
+    val-log-level: 1
+    
+    # NSEC3 iteration counts
+    val-nsec3-keysize-iterations: "1024 150 2048 500 4096 2500"
+    
+    # Harden against algorithm downgrade
+    harden-algo-downgrade: yes
+    harden-dnssec-stripped: yes

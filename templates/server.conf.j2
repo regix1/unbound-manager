@@ -1,0 +1,52 @@
+server:
+    # Basic setup
+    chroot: ""
+    verbosity: {{ verbosity }}
+    interface: {{ server_ip }}
+    interface: 127.0.0.1
+    port: 53
+    ip-freebind: yes
+    do-ip4: {{ do_ip4 | lower }}
+    do-ip6: {{ do_ip6 | lower }}
+    do-udp: {{ do_udp | lower }}
+    do-tcp: {{ do_tcp | lower }}
+    prefer-ip6: {{ prefer_ip6 | lower }}
+    use-syslog: yes
+    
+    # Performance tuning
+    num-threads: {{ num_threads }}
+    msg-cache-size: {{ msg_cache_size }}
+    rrset-cache-size: {{ rrset_cache_size }}
+    cache-min-ttl: {{ cache_min_ttl }}
+    cache-max-ttl: {{ cache_max_ttl }}
+    prefetch: yes
+    prefetch-key: yes
+    serve-expired: yes
+    serve-expired-ttl: 86400
+    
+    # Security
+    hide-identity: yes
+    hide-version: yes
+    harden-glue: yes
+    harden-dnssec-stripped: yes
+    harden-referral-path: yes
+    harden-algo-downgrade: yes
+    aggressive-nsec: yes
+    use-caps-for-id: yes
+    
+    # Access Control
+    access-control: 127.0.0.0/8 allow
+    access-control: 10.0.0.0/8 allow
+    access-control: 172.16.0.0/12 allow
+    access-control: 192.168.0.0/16 allow
+    
+    # Private Addresses (no DNS rebinding)
+    private-address: 10.0.0.0/8
+    private-address: 172.16.0.0/12
+    private-address: 192.168.0.0/16
+    private-address: 169.254.0.0/16
+    private-address: fd00::/8
+    private-address: fe80::/10
+    
+    # Module Configuration
+    module-config: "validator cachedb iterator"
