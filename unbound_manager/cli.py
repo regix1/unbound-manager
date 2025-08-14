@@ -244,7 +244,19 @@ class UnboundManagerCLI:
             
             # Create backup first
             console.print("[cyan]Creating backup before update...[/cyan]")
-            backup_dir = project_dir.parent / f"unbound-manager.backup.{Path.ctime(project_dir)}"
+            
+            # Fix: Use time.time() or os.path.getctime() instead of Path.ctime
+            import time
+            timestamp = int(time.time())
+            backup_dir = project_dir.parent / f"unbound-manager.backup.{timestamp}"
+            
+            # Alternative fix using getctime:
+            # import os
+            # if project_dir.exists():
+            #     timestamp = int(os.path.getctime(project_dir))
+            #     backup_dir = project_dir.parent / f"unbound-manager.backup.{timestamp}"
+            # else:
+            #     backup_dir = project_dir.parent / f"unbound-manager.backup.{int(time.time())}"
             
             # Stash any local changes
             console.print("[cyan]Stashing local changes...[/cyan]")
