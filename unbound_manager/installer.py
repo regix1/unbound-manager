@@ -400,23 +400,115 @@ class UnboundInstaller:
         # Backup configuration
         from .backup import BackupManager
         backup_manager = BackupManager()
-        backup_path = backup_manager.create_backup()
+        backup_path = backup_manager.create_backup("before_update")
         
         # Select new version
         version = self.select_version()
         
-        # Stop service
-        console.print("[cyan]Stopping Unbound service...[/cyan]")
-        run_command(["systemctl", "stop", "unbound"])
+        # IMPORTANT: Save current DNS settings and set temporary resolver
+        console.print("[cyan]Configuring temporary DNS resolver...[/cyan]")
         
-        # Compile and install new version
-        if self.compile_unbound(version):
+        # Save current resolv.conf
+        resolv_backup = Path("/etc/resolv.conf.unbound_backup")
+        resolv_conf = Path("/etc/resolv.conf")
+        
+        try:
+            # Backup current resolv.conf
+            if resolv_conf.exists():
+                shutil.copy(str(resolv_conf), str(resolv_backup))
+            
+            # Set temporary DNS servers (Google and Cloudflare)
+            temp_resolv = """# Temporary DNS for Unbound update
+    nameserver 8.8.8.8
+    nameserver 8.8.4.4
+    nameserver 1.1.1.1
+    """
+            with open(resolv_conf, 'w') as f:
+                f.write(temp_resolv)
+            
+            console.print("[green]✓[/green] Temporary DNS configured")
+            
+            # Test DNS resolution before stopping Unbound
+            test_result = run_command(
+                ["nslookup", "nlnetlabs.nl", "8.8.8.8"],
+                check=False,
+                timeout=5
+            )
+            if test_result.returncode != 0:
+                console.print("[yellow]Warning: DNS resolution test failed, but continuing...[/yellow]")
+            
+            # Stop service
+            console.print("[cyan]Stopping Unbound service...[/cyan]")
+            run_command(["systemctl", "stop", "unbound"])
+            
+            # Wait a moment for service to fully stop
+            time.sleep(2)
+            
+            # Compile and install new version
+            update_successful = False
+            try:
+                if self.compile_unbound(version):
+                    update_successful = True
+                    console.print("[green]✓[/green] Unbound updated successfully")
+            except Exception as e:
+                console.print(f"[red]Update failed: {e}[/red]")
+                update_successful = False
+            
+            # Always restore DNS configuration
+            console.print("[cyan]Restoring DNS configuration...[/cyan]")
+            if resolv_backup.exists():
+                shutil.copy(str(resolv_backup), str(resolv_conf))
+                resolv_backup.unlink()  # Remove backup
+                console.print("[green]✓[/green] DNS configuration restored")
+            
             # Restart service
             console.print("[cyan]Starting Unbound service...[/cyan]")
             run_command(["systemctl", "start", "unbound"])
             
-            console.print("[green]✓[/green] Unbound updated successfully")
-        else:
-            console.print("[red]Update failed, restoring backup...[/red]")
-            backup_manager.restore_specific_backup(backup_path)
-            run_command(["systemctl", "start", "unbound"])
+            # Wait for service to be ready
+            time.sleep(3)
+            
+            # Verify service is running
+            if check_service_status("unbound"):
+                console.print("[green]✓[/green] Unbound service started successfully")
+                
+                # Test DNS resolution through Unbound
+                test_result = run_command(
+                    ["dig", "@127.0.0.1", "+short", "example.com"],
+                    check=False,
+                    timeout=5
+                )
+                if test_result.returncode == 0 and test_result.stdout.strip():
+                    console.print("[green]✓[/green] DNS resolution working through Unbound")
+            else:
+                console.print("[yellow]⚠[/yellow] Unbound service may not be running properly")
+            
+            if not update_successful:
+                console.print("[red]Update failed, restoring from backup...[/red]")
+                backup_manager.restore_specific_backup(backup_path)
+                run_command(["systemctl", "start", "unbound"])
+                
+        except Exception as e:
+            console.print(f"[red]Critical error during update: {e}[/red]")
+            
+            # Emergency recovery
+            console.print("[yellow]Attempting emergency recovery...[/yellow]")
+            
+            # Restore resolv.conf if backup exists
+            if resolv_backup.exists():
+                try:
+                    shutil.copy(str(resolv_backup), str(resolv_conf))
+                    resolv_backup.unlink()
+                    console.print("[green]✓[/green] DNS configuration restored")
+                except Exception as restore_error:
+                    console.print(f"[red]Could not restore DNS: {restore_error}[/red]")
+            
+            # Restore Unbound from backup
+            try:
+                backup_manager.restore_specific_backup(backup_path)
+                run_command(["systemctl", "start", "unbound"])
+                console.print("[green]✓[/green] Unbound restored from backup")
+            except Exception as restore_error:
+                console.print(f"[red]Could not restore Unbound: {restore_error}[/red]")
+                console.print("[red]Manual intervention may be required[/red]")
+                console.print("[cyan]Try running: systemctl start unbound[/cyan]")
