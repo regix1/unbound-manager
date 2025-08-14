@@ -27,6 +27,36 @@ from .dnssec import DNSSECManager
 console = Console()
 
 
+"""Unbound installation and management module."""
+
+import os
+import time  # FIX: Add time import
+import shutil  # FIX: Add shutil import
+import tempfile
+from pathlib import Path
+from typing import List, Optional, Tuple
+import requests
+from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+from rich.panel import Panel
+from rich.prompt import Prompt
+
+from .constants import (
+    UNBOUND_DIR, UNBOUND_CONF, UNBOUND_CONF_D,
+    UNBOUND_RELEASES_URL, SYSTEMD_SERVICE
+)
+from .utils import (
+    run_command, ensure_user_exists, ensure_directory,
+    install_packages, check_package_installed, prompt_yes_no,
+    get_server_ip, check_service_status  # FIX: Import check_service_status
+)
+from .config_manager import ConfigManager
+from .redis_manager import RedisManager
+from .dnssec import DNSSECManager
+
+console = Console()
+
+
 class UnboundInstaller:
     """Handle Unbound installation and updates."""
     
@@ -35,6 +65,318 @@ class UnboundInstaller:
         self.config_manager = ConfigManager()
         self.redis_manager = RedisManager()
         self.dnssec_manager = DNSSECManager()
+    
+    def update_unbound(self) -> None:
+        """Update Unbound to a newer version - FIXED VERSION."""
+        console.print(Panel.fit(
+            "[bold cyan]Update Unbound[/bold cyan]\n\n"
+            "This will update Unbound to a newer version while preserving your configuration.",
+            border_style="cyan"
+        ))
+        
+        # Check current version
+        current_version = None
+        try:
+            result = run_command(["unbound", "-V"], check=False)
+            if result.returncode == 0:
+                current_version = result.stdout.split()[1]
+                console.print(f"[cyan]Current version:[/cyan] {current_version}")
+        except Exception:
+            pass
+        
+        # Backup configuration
+        from .backup import BackupManager
+        backup_manager = BackupManager()
+        backup_path = backup_manager.create_backup("before_update")
+        
+        # Select new version
+        version = self.select_version()
+        
+        # Check if same version
+        if current_version and version in current_version:
+            console.print(f"[yellow]You are already running version {version}[/yellow]")
+            if not prompt_yes_no("Continue anyway?", default=False):
+                console.print("[yellow]Update cancelled[/yellow]")
+                return
+        
+        # IMPORTANT: Configure temporary DNS resolver
+        console.print("[cyan]Configuring temporary DNS resolver...[/cyan]")
+        
+        # Save current resolv.conf
+        resolv_backup = Path("/etc/resolv.conf.unbound_backup")
+        resolv_conf = Path("/etc/resolv.conf")
+        
+        try:
+            # Backup current resolv.conf
+            if resolv_conf.exists():
+                shutil.copy(str(resolv_conf), str(resolv_backup))
+            
+            # Set temporary DNS servers with multiple options
+            temp_resolv = """# Temporary DNS for Unbound update
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+nameserver 1.1.1.1
+nameserver 1.0.0.1
+nameserver 9.9.9.9
+"""
+            with open(resolv_conf, 'w') as f:
+                f.write(temp_resolv)
+            
+            console.print("[green]✓[/green] Temporary DNS configured")
+            
+            # Test DNS resolution multiple times with different servers
+            dns_working = False
+            for test_server in ["8.8.8.8", "1.1.1.1", "9.9.9.9"]:
+                test_result = run_command(
+                    ["nslookup", "nlnetlabs.nl", test_server],
+                    check=False,
+                    timeout=5
+                )
+                if test_result.returncode == 0:
+                    dns_working = True
+                    console.print(f"[green]✓[/green] DNS resolution working via {test_server}")
+                    break
+            
+            if not dns_working:
+                # Try using host command as fallback
+                test_result = run_command(
+                    ["host", "nlnetlabs.nl", "8.8.8.8"],
+                    check=False,
+                    timeout=5
+                )
+                if test_result.returncode == 0:
+                    dns_working = True
+                    console.print("[green]✓[/green] DNS resolution working via host command")
+            
+            if not dns_working:
+                console.print("[yellow]Warning: DNS resolution test failed, but continuing...[/yellow]")
+                # Try to add the IP directly to /etc/hosts as a workaround
+                console.print("[cyan]Adding nlnetlabs.nl to /etc/hosts as workaround...[/cyan]")
+                with open("/etc/hosts", "a") as f:
+                    f.write("\n# Temporary entry for Unbound update\n")
+                    f.write("185.49.141.38 nlnetlabs.nl\n")
+                    f.write("185.49.141.38 www.nlnetlabs.nl\n")
+            
+            # Stop service
+            console.print("[cyan]Stopping Unbound service...[/cyan]")
+            run_command(["systemctl", "stop", "unbound"])
+            
+            # Wait for service to fully stop
+            time.sleep(2)
+            
+            # Pre-download approach to minimize downtime
+            console.print("[cyan]Downloading Unbound source...[/cyan]")
+            
+            # Create temporary directory
+            temp_dir = Path(tempfile.mkdtemp(prefix="unbound_update_"))
+            tarball = temp_dir / f"unbound-{version}.tar.gz"
+            
+            # Download with multiple fallback methods
+            download_successful = False
+            
+            # Method 1: Try with requests library
+            try:
+                url = f"https://nlnetlabs.nl/downloads/unbound/unbound-{version}.tar.gz"
+                response = requests.get(url, timeout=30, stream=True)
+                response.raise_for_status()
+                
+                total_size = int(response.headers.get('content-length', 0))
+                
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    BarColumn(),
+                    TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                ) as progress:
+                    task = progress.add_task(f"Downloading {version}...", total=total_size)
+                    
+                    with open(tarball, 'wb') as f:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                            progress.update(task, advance=len(chunk))
+                
+                download_successful = True
+                console.print("[green]✓[/green] Download successful")
+                
+            except Exception as e:
+                console.print(f"[yellow]Download method 1 failed: {e}[/yellow]")
+                
+                # Method 2: Try with wget
+                console.print("[cyan]Trying alternative download method with wget...[/cyan]")
+                try:
+                    result = run_command(
+                        ["wget", "-O", str(tarball), url],
+                        check=False,
+                        timeout=60
+                    )
+                    if result.returncode == 0:
+                        download_successful = True
+                        console.print("[green]✓[/green] Download successful with wget")
+                except Exception as e2:
+                    console.print(f"[yellow]Download method 2 failed: {e2}[/yellow]")
+                    
+                    # Method 3: Try with curl
+                    console.print("[cyan]Trying alternative download method with curl...[/cyan]")
+                    try:
+                        result = run_command(
+                            ["curl", "-L", "-o", str(tarball), url],
+                            check=False,
+                            timeout=60
+                        )
+                        if result.returncode == 0:
+                            download_successful = True
+                            console.print("[green]✓[/green] Download successful with curl")
+                    except Exception as e3:
+                        console.print(f"[red]All download methods failed: {e3}[/red]")
+            
+            # Clean up /etc/hosts if we added entries
+            if not dns_working:
+                # Remove temporary hosts entries
+                with open("/etc/hosts", "r") as f:
+                    lines = f.readlines()
+                with open("/etc/hosts", "w") as f:
+                    skip_next = False
+                    for line in lines:
+                        if "Temporary entry for Unbound update" in line:
+                            skip_next = True
+                            continue
+                        if skip_next and "nlnetlabs.nl" in line:
+                            continue
+                        skip_next = False
+                        f.write(line)
+            
+            # Restore DNS configuration
+            console.print("[cyan]Restoring DNS configuration...[/cyan]")
+            if resolv_backup.exists():
+                shutil.copy(str(resolv_backup), str(resolv_conf))
+                resolv_backup.unlink()
+                console.print("[green]✓[/green] DNS configuration restored")
+            
+            # If download was successful, proceed with compilation
+            update_successful = False
+            if download_successful and tarball.exists():
+                try:
+                    # Extract and compile
+                    console.print("[cyan]Extracting source code...[/cyan]")
+                    run_command(["tar", "-xzf", str(tarball)], cwd=temp_dir)
+                    
+                    source_dir = temp_dir / f"unbound-{version}"
+                    
+                    # Configure
+                    console.print("[cyan]Configuring Unbound...[/cyan]")
+                    configure_args = [
+                        "./configure",
+                        "--prefix=/usr",
+                        "--sysconfdir=/etc",
+                        "--with-libevent",
+                        "--with-libhiredis",
+                        "--with-libnghttp2",
+                        "--with-pidfile=/run/unbound.pid",
+                        "--with-rootkey-file=/etc/unbound/root.key",
+                        "--enable-subnet",
+                        "--enable-tfo-client",
+                        "--enable-tfo-server",
+                        "--enable-cachedb",
+                        "--enable-ipsecmod",
+                        "--with-ssl",
+                    ]
+                    
+                    run_command(configure_args, cwd=source_dir, timeout=120)
+                    
+                    # Compile
+                    console.print("[cyan]Compiling Unbound (this may take several minutes)...[/cyan]")
+                    cpu_count = os.cpu_count() or 1
+                    run_command(["make", f"-j{cpu_count}"], cwd=source_dir, timeout=600)
+                    
+                    # Install
+                    console.print("[cyan]Installing Unbound...[/cyan]")
+                    run_command(["make", "install"], cwd=source_dir)
+                    run_command(["ldconfig"])
+                    
+                    update_successful = True
+                    console.print("[green]✓[/green] Unbound updated successfully")
+                    
+                except Exception as e:
+                    console.print(f"[red]Compilation/installation failed: {e}[/red]")
+                    update_successful = False
+                
+                # Clean up temp directory
+                if temp_dir.exists():
+                    shutil.rmtree(temp_dir)
+            else:
+                console.print("[red]Download failed, cannot proceed with update[/red]")
+            
+            # Restart service
+            console.print("[cyan]Starting Unbound service...[/cyan]")
+            run_command(["systemctl", "start", "unbound"])
+            
+            # Wait for service to be ready
+            time.sleep(3)
+            
+            # Verify service is running
+            if check_service_status("unbound"):
+                console.print("[green]✓[/green] Unbound service started successfully")
+                
+                # Test DNS resolution through Unbound
+                test_result = run_command(
+                    ["dig", "@127.0.0.1", "+short", "example.com"],
+                    check=False,
+                    timeout=5
+                )
+                if test_result.returncode == 0 and test_result.stdout.strip():
+                    console.print("[green]✓[/green] DNS resolution working through Unbound")
+                    
+                    # Show new version
+                    if update_successful:
+                        try:
+                            result = run_command(["unbound", "-V"], check=False)
+                            if result.returncode == 0:
+                                console.print(f"[cyan]New version:[/cyan] {result.stdout.split()[1]}")
+                        except Exception:
+                            pass
+            else:
+                console.print("[yellow]⚠[/yellow] Unbound service may not be running properly")
+            
+            if not update_successful:
+                console.print("[red]Update failed, restoring from backup...[/red]")
+                backup_manager.restore_specific_backup(backup_path)
+                run_command(["systemctl", "start", "unbound"])
+                
+        except Exception as e:
+            console.print(f"[red]Critical error during update: {e}[/red]")
+            
+            # Emergency recovery
+            console.print("[yellow]Attempting emergency recovery...[/yellow]")
+            
+            # Clean up /etc/hosts if needed
+            try:
+                with open("/etc/hosts", "r") as f:
+                    lines = f.readlines()
+                with open("/etc/hosts", "w") as f:
+                    for line in lines:
+                        if "nlnetlabs.nl" not in line:
+                            f.write(line)
+            except Exception:
+                pass
+            
+            # Restore resolv.conf if backup exists
+            if resolv_backup.exists():
+                try:
+                    shutil.copy(str(resolv_backup), str(resolv_conf))
+                    resolv_backup.unlink()
+                    console.print("[green]✓[/green] DNS configuration restored")
+                except Exception as restore_error:
+                    console.print(f"[red]Could not restore DNS: {restore_error}[/red]")
+            
+            # Restore Unbound from backup
+            try:
+                backup_manager.restore_specific_backup(backup_path)
+                run_command(["systemctl", "start", "unbound"])
+                console.print("[green]✓[/green] Unbound restored from backup")
+            except Exception as restore_error:
+                console.print(f"[red]Could not restore Unbound: {restore_error}[/red]")
+                console.print("[red]Manual intervention may be required[/red]")
+                console.print("[cyan]Try running: systemctl start unbound[/cyan]")
     
     def get_available_versions(self) -> List[str]:
         """Fetch available Unbound versions from GitHub."""
