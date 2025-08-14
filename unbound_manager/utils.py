@@ -28,6 +28,7 @@ def run_command(
     capture_output: bool = True,
     text: bool = True,
     timeout: Optional[int] = 30,
+    cwd: Optional[Path] = None,  # Add this parameter
 ) -> subprocess.CompletedProcess:
     """
     Run a shell command and return the result.
@@ -38,6 +39,7 @@ def run_command(
         capture_output: Whether to capture stdout/stderr
         text: Whether to return output as text
         timeout: Command timeout in seconds
+        cwd: Working directory for the command
     
     Returns:
         CompletedProcess instance
@@ -49,6 +51,7 @@ def run_command(
             capture_output=capture_output,
             text=text,
             timeout=timeout,
+            cwd=cwd,  # Add this to the subprocess.run call
         )
         return result
     except subprocess.TimeoutExpired:
