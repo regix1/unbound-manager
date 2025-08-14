@@ -6,4 +6,3 @@ requests>=2.31.0
 dnspython>=2.4.0
 redis>=5.0.0
 psutil>=5.9.0
-python-systemd>=235
