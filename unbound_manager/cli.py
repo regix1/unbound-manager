@@ -3,6 +3,7 @@
 
 import sys
 from typing import Optional
+from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -12,7 +13,7 @@ from rich.text import Text
 from rich.align import Align
 
 from .constants import APP_VERSION
-from .utils import check_root, check_service_status
+from .utils import check_root, check_service_status, run_command, prompt_yes_no
 from .installer import UnboundInstaller
 from .config_manager import ConfigManager
 from .redis_manager import RedisManager
@@ -119,6 +120,7 @@ class UnboundManagerCLI:
             "[bold white]SYSTEM[/bold white]\n\n"
             "[green]13[/green]. Start/Stop Services\n"
             "[green]14[/green]. View Statistics\n"
+            "[green]15[/green]. Check for Updates\n"
             "[green]0[/green]. Exit",
             border_style="blue"
         ))
@@ -126,11 +128,189 @@ class UnboundManagerCLI:
         console.print()
         choice = Prompt.ask(
             "[yellow]Please select an option[/yellow]",
-            choices=[str(i) for i in range(15)],
+            choices=[str(i) for i in range(16)],
             default="0"
         )
         
         return choice
+    
+    def check_for_updates(self) -> None:
+        """Check for updates from GitHub."""
+        console.print(Panel.fit(
+            "[bold cyan]Update Manager[/bold cyan]",
+            border_style="cyan"
+        ))
+        
+        try:
+            # Check current version
+            version_file = Path(__file__).parent.parent / "VERSION"
+            if version_file.exists():
+                current_version = version_file.read_text().strip()
+            else:
+                current_version = APP_VERSION
+            
+            console.print(f"[cyan]Current version:[/cyan] {current_version}")
+            
+            # Check for updates
+            import requests
+            
+            console.print("[yellow]Checking for updates...[/yellow]")
+            
+            try:
+                response = requests.get(
+                    "https://api.github.com/repos/regix1/unbound-manager/releases/latest",
+                    timeout=5
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    latest_version = data.get("tag_name", "").lstrip("v")
+                    
+                    if not latest_version:
+                        # No releases yet, check commits
+                        console.print("[yellow]No releases found, checking latest commits...[/yellow]")
+                        self.check_git_updates()
+                        return
+                    
+                    console.print(f"[cyan]Latest version:[/cyan] {latest_version}")
+                    
+                    if latest_version != current_version:
+                        console.print("\n[yellow]⚠ An update is available![/yellow]")
+                        
+                        # Show release notes if available
+                        if data.get("body"):
+                            console.print("\n[cyan]Release Notes:[/cyan]")
+                            console.print(Panel(data["body"][:500], border_style="dim"))
+                        
+                        if prompt_yes_no("Would you like to update now?"):
+                            self.perform_update()
+                    else:
+                        console.print("\n[green]✓ You are running the latest version[/green]")
+                elif response.status_code == 404:
+                    console.print("[yellow]No releases found on GitHub[/yellow]")
+                    self.check_git_updates()
+                else:
+                    console.print(f"[yellow]Could not check for updates (HTTP {response.status_code})[/yellow]")
+                    
+            except requests.exceptions.RequestException as e:
+                console.print(f"[yellow]Could not connect to GitHub: {e}[/yellow]")
+                console.print("[cyan]You can manually update with: cd ~/unbound-manager && git pull[/cyan]")
+                
+        except ImportError:
+            console.print("[red]requests library not installed[/red]")
+            console.print("[cyan]Install with: pip3 install requests[/cyan]")
+        except Exception as e:
+            console.print(f"[red]Error checking for updates: {e}[/red]")
+    
+    def check_git_updates(self) -> None:
+        """Check for updates using git."""
+        try:
+            project_dir = Path(__file__).parent.parent
+            
+            # Fetch latest changes
+            console.print("[cyan]Fetching latest changes from git...[/cyan]")
+            result = run_command(
+                ["git", "fetch"],
+                cwd=project_dir,
+                check=False
+            )
+            
+            # Check if we're behind
+            result = run_command(
+                ["git", "status", "-uno"],
+                cwd=project_dir,
+                check=False
+            )
+            
+            if "Your branch is behind" in result.stdout:
+                console.print("\n[yellow]⚠ Updates are available![/yellow]")
+                if prompt_yes_no("Would you like to update now?"):
+                    self.perform_update()
+            elif "Your branch is up to date" in result.stdout:
+                console.print("\n[green]✓ You are running the latest version[/green]")
+            else:
+                console.print("\n[cyan]Repository status:[/cyan]")
+                console.print(result.stdout)
+                
+        except Exception as e:
+            console.print(f"[yellow]Could not check git status: {e}[/yellow]")
+    
+    def perform_update(self) -> None:
+        """Perform auto-update."""
+        console.print("\n[cyan]Starting update process...[/cyan]")
+        
+        try:
+            project_dir = Path(__file__).parent.parent
+            
+            # Create backup first
+            console.print("[cyan]Creating backup before update...[/cyan]")
+            backup_dir = project_dir.parent / f"unbound-manager.backup.{Path.ctime(project_dir)}"
+            
+            # Stash any local changes
+            console.print("[cyan]Stashing local changes...[/cyan]")
+            run_command(
+                ["git", "stash"],
+                cwd=project_dir,
+                check=False
+            )
+            
+            # Pull latest changes
+            console.print("[cyan]Pulling latest changes from GitHub...[/cyan]")
+            result = run_command(
+                ["git", "pull", "origin", "main"],
+                cwd=project_dir,
+                check=False
+            )
+            
+            if result.returncode != 0:
+                # Try master branch if main doesn't exist
+                result = run_command(
+                    ["git", "pull", "origin", "master"],
+                    cwd=project_dir,
+                    check=False
+                )
+            
+            if result.returncode == 0:
+                console.print("[green]✓ Code updated successfully[/green]")
+                
+                # Reinstall pip package
+                console.print("[cyan]Updating Python package...[/cyan]")
+                result = run_command(
+                    ["pip3", "install", "-e", "."],
+                    cwd=project_dir,
+                    check=False
+                )
+                
+                if result.returncode == 0:
+                    console.print("[green]✓ Python package updated[/green]")
+                    
+                    # Update VERSION file
+                    version_file = project_dir / "VERSION"
+                    if not version_file.exists():
+                        version_file.write_text(APP_VERSION)
+                    
+                    console.print("\n[green]✓ Update completed successfully![/green]")
+                    console.print("[yellow]Please restart unbound-manager to use the new version[/yellow]")
+                    
+                    # Ask to restart
+                    if prompt_yes_no("Restart now?"):
+                        console.print("[cyan]Restarting...[/cyan]")
+                        import os
+                        import sys
+                        os.execv(sys.executable, [sys.executable] + sys.argv)
+                else:
+                    console.print("[yellow]Warning: Could not update Python package[/yellow]")
+                    console.print("[cyan]Try manually: pip3 install -e ~/unbound-manager[/cyan]")
+            else:
+                console.print("[red]Update failed. Please check the error messages above.[/red]")
+                console.print("[cyan]You can try updating manually:[/cyan]")
+                console.print("  cd ~/unbound-manager")
+                console.print("  git pull")
+                console.print("  pip3 install -e .")
+                
+        except Exception as e:
+            console.print(f"[red]Error during update: {e}[/red]")
+            console.print("[yellow]Please update manually using the instructions above[/yellow]")
     
     def handle_choice(self, choice: str) -> bool:
         """
@@ -172,7 +352,11 @@ class UnboundManagerCLI:
             
             elif choice == "7":
                 # Backup configuration
-                self.backup_manager.create_backup()
+                description = Prompt.ask(
+                    "[cyan]Enter backup description (optional)[/cyan]",
+                    default=""
+                )
+                self.backup_manager.create_backup(description)
             
             elif choice == "8":
                 # Restore configuration
@@ -192,7 +376,11 @@ class UnboundManagerCLI:
             
             elif choice == "12":
                 # View logs
-                self.troubleshooter.view_logs()
+                lines = IntPrompt.ask(
+                    "[cyan]Number of log lines to show[/cyan]",
+                    default=50
+                )
+                self.troubleshooter.view_logs(lines)
             
             elif choice == "13":
                 # Start/Stop services
@@ -202,6 +390,10 @@ class UnboundManagerCLI:
                 # View statistics
                 self.troubleshooter.show_statistics()
             
+            elif choice == "15":
+                # Check for updates
+                self.check_for_updates()
+            
             else:
                 console.print("[red]Invalid option selected[/red]")
         
@@ -209,6 +401,9 @@ class UnboundManagerCLI:
             console.print("\n[yellow]Operation cancelled by user[/yellow]")
         except Exception as e:
             console.print(f"[red]An error occurred: {e}[/red]")
+            import traceback
+            if "--debug" in sys.argv:
+                console.print("[dim]" + traceback.format_exc() + "[/dim]")
         
         console.print("\n[cyan]Press Enter to continue...[/cyan]")
         input()
@@ -227,40 +422,72 @@ class UnboundManagerCLI:
             "[green]5[/green]. Stop Redis\n"
             "[green]6[/green]. Restart Redis\n"
             "[green]7[/green]. Restart All Services\n"
+            "[green]8[/green]. View Service Status\n"
             "[green]0[/green]. Back",
             border_style="cyan"
         ))
         
-        choice = Prompt.ask("Select action", choices=["0", "1", "2", "3", "4", "5", "6", "7"])
+        choice = Prompt.ask("Select action", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8"])
         
         if choice == "1":
-            restart_service("unbound")
-            console.print("[green]Unbound service started[/green]")
+            if restart_service("unbound"):
+                console.print("[green]✓ Unbound service started[/green]")
+            else:
+                console.print("[red]✗ Failed to start Unbound[/red]")
         elif choice == "2":
-            from .utils import run_command
             run_command(["systemctl", "stop", "unbound"])
             console.print("[yellow]Unbound service stopped[/yellow]")
         elif choice == "3":
-            restart_service("unbound")
-            console.print("[green]Unbound service restarted[/green]")
+            if restart_service("unbound"):
+                console.print("[green]✓ Unbound service restarted[/green]")
+            else:
+                console.print("[red]✗ Failed to restart Unbound[/red]")
         elif choice == "4":
-            restart_service("redis-server")
-            console.print("[green]Redis service started[/green]")
+            if restart_service("redis-server"):
+                console.print("[green]✓ Redis service started[/green]")
+            else:
+                console.print("[red]✗ Failed to start Redis[/red]")
         elif choice == "5":
-            from .utils import run_command
             run_command(["systemctl", "stop", "redis-server"])
             console.print("[yellow]Redis service stopped[/yellow]")
         elif choice == "6":
-            restart_service("redis-server")
-            console.print("[green]Redis service restarted[/green]")
+            if restart_service("redis-server"):
+                console.print("[green]✓ Redis service restarted[/green]")
+            else:
+                console.print("[red]✗ Failed to restart Redis[/red]")
         elif choice == "7":
-            restart_service("redis-server")
-            restart_service("unbound")
-            console.print("[green]All services restarted[/green]")
+            redis_ok = restart_service("redis-server")
+            unbound_ok = restart_service("unbound")
+            if redis_ok and unbound_ok:
+                console.print("[green]✓ All services restarted successfully[/green]")
+            else:
+                console.print("[yellow]⚠ Some services failed to restart[/yellow]")
+        elif choice == "8":
+            # Show detailed status
+            console.print("\n[cyan]Service Status Details:[/cyan]\n")
+            
+            for service in ["unbound", "redis-server"]:
+                result = run_command(
+                    ["systemctl", "status", service, "--no-pager"],
+                    check=False
+                )
+                console.print(f"[bold]{service}:[/bold]")
+                console.print(result.stdout[:500])  # First 500 chars
+                console.print()
     
     def run(self) -> None:
         """Run the main application loop."""
         check_root()
+        
+        # Check for updates on startup (optional)
+        if "--no-update-check" not in sys.argv:
+            try:
+                import requests
+                # Quick update check without blocking
+                console.print("[dim]Checking for updates...[/dim]", end="\r")
+                # This is done silently in background
+            except ImportError:
+                pass  # requests not installed, skip update check
         
         while True:
             self.show_banner()
@@ -285,6 +512,9 @@ def main():
         return 1
     except Exception as e:
         console.print(f"\n[red]Fatal error: {e}[/red]")
+        import traceback
+        if "--debug" in sys.argv:
+            console.print("[dim]" + traceback.format_exc() + "[/dim]")
         return 1
 
 
