@@ -28,7 +28,7 @@ def run_command(
     capture_output: bool = True,
     text: bool = True,
     timeout: Optional[int] = 30,
-    cwd: Optional[Path] = None,  # Add this parameter
+    cwd: Optional[Path] = None,
 ) -> subprocess.CompletedProcess:
     """
     Run a shell command and return the result.
@@ -51,7 +51,7 @@ def run_command(
             capture_output=capture_output,
             text=text,
             timeout=timeout,
-            cwd=cwd,  # Add this to the subprocess.run call
+            cwd=cwd,
         )
         return result
     except subprocess.TimeoutExpired:
@@ -197,14 +197,38 @@ def download_file(url: str, destination: Path, timeout: int = 30) -> bool:
 
 
 def prompt_yes_no(question: str, default: bool = False) -> bool:
-    """Prompt the user for a yes/no answer."""
-    default_str = "Y/n" if default else "y/N"
-    response = console.input(f"[cyan]{question} [{default_str}]: [/cyan]").strip().lower()
+    """
+    Prompt the user for a yes/no answer with clear indication of options.
     
+    Args:
+        question: The question to ask
+        default: Default answer if user just presses Enter
+    
+    Returns:
+        bool: True for yes, False for no
+    """
+    # Create the prompt suffix based on default
+    if default:
+        prompt_suffix = "[Y/n]"  # Default is Yes (capital Y)
+    else:
+        prompt_suffix = "[y/N]"  # Default is No (capital N)
+    
+    # Show the question with clear options
+    response = console.input(f"[cyan]{question} {prompt_suffix}: [/cyan]").strip().lower()
+    
+    # If empty response, use default
     if not response:
         return default
     
-    return response in ['y', 'yes']
+    # Accept various forms of yes/no
+    if response in ['y', 'yes', 'yeah', 'yep', 'sure', 'ok', 'okay']:
+        return True
+    elif response in ['n', 'no', 'nope', 'nah']:
+        return False
+    else:
+        # If unclear response, ask again
+        console.print("[yellow]Please answer with 'y' for yes or 'n' for no.[/yellow]")
+        return prompt_yes_no(question, default)
 
 
 def get_system_info() -> Dict[str, Any]:

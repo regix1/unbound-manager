@@ -1131,7 +1131,7 @@
         "kind": 2,
         "importPath": "unbound_manager.utils",
         "description": "unbound_manager.utils",
-        "peekOfCode": "def run_command(\n    command: List[str],\n    check: bool = True,\n    capture_output: bool = True,\n    text: bool = True,\n    timeout: Optional[int] = 30,\n    cwd: Optional[Path] = None,  # Add this parameter\n) -> subprocess.CompletedProcess:\n    \"\"\"\n    Run a shell command and return the result.",
+        "peekOfCode": "def run_command(\n    command: List[str],\n    check: bool = True,\n    capture_output: bool = True,\n    text: bool = True,\n    timeout: Optional[int] = 30,\n    cwd: Optional[Path] = None,\n) -> subprocess.CompletedProcess:\n    \"\"\"\n    Run a shell command and return the result.",
         "detail": "unbound_manager.utils",
         "documentation": {}
     },
@@ -1212,7 +1212,7 @@
         "kind": 2,
         "importPath": "unbound_manager.utils",
         "description": "unbound_manager.utils",
-        "peekOfCode": "def prompt_yes_no(question: str, default: bool = False) -> bool:\n    \"\"\"Prompt the user for a yes/no answer.\"\"\"\n    default_str = \"Y/n\" if default else \"y/N\"\n    response = console.input(f\"[cyan]{question} [{default_str}]: [/cyan]\").strip().lower()\n    if not response:\n        return default\n    return response in ['y', 'yes']\ndef get_system_info() -> Dict[str, Any]:\n    \"\"\"Get system information.\"\"\"\n    return {",
+        "peekOfCode": "def prompt_yes_no(question: str, default: bool = False) -> bool:\n    \"\"\"\n    Prompt the user for a yes/no answer with clear indication of options.\n    Args:\n        question: The question to ask\n        default: Default answer if user just presses Enter\n    Returns:\n        bool: True for yes, False for no\n    \"\"\"\n    # Create the prompt suffix based on default",
         "detail": "unbound_manager.utils",
         "documentation": {}
     },
