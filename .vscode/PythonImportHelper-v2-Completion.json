@@ -154,6 +154,14 @@
         "documentation": {}
     },
     {
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
         "label": "Optional",
         "importPath": "typing",
         "description": "typing",
@@ -466,19 +474,11 @@
         "documentation": {}
     },
     {
-        "label": "Prompt",
-        "importPath": "rich.prompt",
-        "description": "rich.prompt",
+        "label": "Table",
+        "importPath": "rich.table",
+        "description": "rich.table",
         "isExtraImport": true,
-        "detail": "rich.prompt",
-        "documentation": {}
-    },
-    {
-        "label": "IntPrompt",
-        "importPath": "rich.prompt",
-        "description": "rich.prompt",
-        "isExtraImport": true,
-        "detail": "rich.prompt",
+        "detail": "rich.table",
         "documentation": {}
     },
     {
@@ -507,6 +507,30 @@
     },
     {
         "label": "IntPrompt",
+        "importPath": "rich.prompt",
+        "description": "rich.prompt",
+        "isExtraImport": true,
+        "detail": "rich.prompt",
+        "documentation": {}
+    },
+    {
+        "label": "Prompt",
+        "importPath": "rich.prompt",
+        "description": "rich.prompt",
+        "isExtraImport": true,
+        "detail": "rich.prompt",
+        "documentation": {}
+    },
+    {
+        "label": "IntPrompt",
+        "importPath": "rich.prompt",
+        "description": "rich.prompt",
+        "isExtraImport": true,
+        "detail": "rich.prompt",
+        "documentation": {}
+    },
+    {
+        "label": "Confirm",
         "importPath": "rich.prompt",
         "description": "rich.prompt",
         "isExtraImport": true,
@@ -571,6 +595,14 @@
         "description": "rich.layout",
         "isExtraImport": true,
         "detail": "rich.layout",
+        "documentation": {}
+    },
+    {
+        "label": "Text",
+        "importPath": "rich.text",
+        "description": "rich.text",
+        "isExtraImport": true,
+        "detail": "rich.text",
         "documentation": {}
     },
     {
@@ -702,6 +734,15 @@
         "documentation": {}
     },
     {
+        "label": "subprocess",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "subprocess",
+        "description": "subprocess",
+        "detail": "subprocess",
+        "documentation": {}
+    },
+    {
         "label": "yaml",
         "kind": 6,
         "isExtraImport": true,
@@ -766,15 +807,6 @@
         "importPath": "statistics",
         "description": "statistics",
         "detail": "statistics",
-        "documentation": {}
-    },
-    {
-        "label": "subprocess",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "subprocess",
-        "description": "subprocess",
-        "detail": "subprocess",
         "documentation": {}
     },
     {
@@ -861,7 +893,7 @@
         "kind": 6,
         "importPath": "unbound_manager.config_manager",
         "description": "unbound_manager.config_manager",
-        "peekOfCode": "class ConfigManager:\n    \"\"\"Manage Unbound configuration files.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment\n        template_dir = Path(__file__).parent.parent / \"templates\"\n        self.env = Environment(\n            loader=FileSystemLoader(template_dir),\n            trim_blocks=True,\n            lstrip_blocks=True,",
+        "peekOfCode": "class ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment\n        template_dir = Path(__file__).parent.parent / \"templates\"\n        self.env = Environment(\n            loader=FileSystemLoader(template_dir),\n            trim_blocks=True,\n            lstrip_blocks=True,",
         "detail": "unbound_manager.config_manager",
         "documentation": {}
     },
@@ -870,7 +902,7 @@
         "kind": 5,
         "importPath": "unbound_manager.config_manager",
         "description": "unbound_manager.config_manager",
-        "peekOfCode": "console = Console()\nclass ConfigManager:\n    \"\"\"Manage Unbound configuration files.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment\n        template_dir = Path(__file__).parent.parent / \"templates\"\n        self.env = Environment(\n            loader=FileSystemLoader(template_dir),\n            trim_blocks=True,",
+        "peekOfCode": "console = Console()\nclass ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment\n        template_dir = Path(__file__).parent.parent / \"templates\"\n        self.env = Environment(\n            loader=FileSystemLoader(template_dir),\n            trim_blocks=True,",
         "detail": "unbound_manager.config_manager",
         "documentation": {}
     },
