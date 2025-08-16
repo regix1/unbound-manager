@@ -209,12 +209,15 @@ def prompt_yes_no(question: str, default: bool = False) -> bool:
     """
     # Create the prompt suffix based on default
     if default:
-        prompt_suffix = "[Y/n]"  # Default is Yes (capital Y)
+        prompt_suffix = "\\[Y/n]"  # Default is Yes (capital Y)
     else:
-        prompt_suffix = "[y/N]"  # Default is No (capital N)
+        prompt_suffix = "\\[y/N]"  # Default is No (capital N)
     
-    # Show the question with clear options
-    response = console.input(f"[cyan]{question} {prompt_suffix}: [/cyan]").strip().lower()
+    # Build the full prompt - escape brackets to prevent Rich from interpreting them
+    full_prompt = f"[cyan]{question} {prompt_suffix}: [/cyan]"
+    
+    # Use console.input which should preserve our formatting
+    response = console.input(full_prompt).strip().lower()
     
     # If empty response, use default
     if not response:
