@@ -2,6 +2,10 @@
 """Main CLI interface for Unbound Manager."""
 
 import sys
+import os
+import time
+import shutil
+import tempfile
 from typing import Optional
 from pathlib import Path
 from rich.console import Console
@@ -11,6 +15,7 @@ from rich.prompt import Prompt, IntPrompt
 from rich.layout import Layout
 from rich.text import Text
 from rich.align import Align
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
 from .constants import APP_VERSION
 from .utils import check_root, check_service_status, run_command, prompt_yes_no
@@ -119,8 +124,15 @@ class UnboundManagerCLI:
         console.print(Panel.fit(
             "[bold white]SYSTEM[/bold white]\n\n"
             "[green]13[/green]. Start/Stop Services\n"
-            "[green]14[/green]. View Statistics\n"
-            "[green]15[/green]. Check for Updates\n"
+            "[green]14[/green]. View Statistics",
+            border_style="blue"
+        ))
+        
+        # Manager Tools section
+        console.print(Panel.fit(
+            "[bold white]MANAGER TOOLS[/bold white]\n\n"
+            "[green]15[/green]. Update Unbound Manager\n"
+            "[green]16[/green]. Uninstall Unbound Manager\n"
             "[green]0[/green]. Exit",
             border_style="blue"
         ))
@@ -128,11 +140,106 @@ class UnboundManagerCLI:
         console.print()
         choice = Prompt.ask(
             "[yellow]Please select an option[/yellow]",
-            choices=[str(i) for i in range(16)],
+            choices=[str(i) for i in range(17)],
             default="0"
         )
         
         return choice
+    
+    def uninstall_manager(self) -> None:
+        """Uninstall Unbound Manager."""
+        console.print(Panel.fit(
+            "[bold red]Uninstall Unbound Manager[/bold red]\n\n"
+            "This will remove the Unbound Manager Python package.\n"
+            "Your Unbound DNS configuration will NOT be removed.",
+            border_style="red"
+        ))
+        
+        if not prompt_yes_no("Do you want to uninstall Unbound Manager?", default=False):
+            console.print("[yellow]Uninstall cancelled[/yellow]")
+            return
+        
+        # Create configuration backup first
+        console.print("[cyan]Creating backup of configuration...[/cyan]")
+        from .backup import BackupManager
+        backup_manager = BackupManager()
+        backup_path = backup_manager.create_backup("before_uninstall")
+        console.print(f"[green]✓[/green] Configuration backed up to: {backup_path}")
+        
+        # Ask about removing Unbound itself
+        remove_unbound = prompt_yes_no(
+            "\n[yellow]Also remove Unbound DNS server?[/yellow]\n"
+            "[red]WARNING: This will remove your DNS server![/red]",
+            default=False
+        )
+        
+        if remove_unbound:
+            console.print("[yellow]Stopping Unbound service...[/yellow]")
+            run_command(["systemctl", "stop", "unbound"], check=False)
+            run_command(["systemctl", "disable", "unbound"], check=False)
+            
+            # Remove Unbound files
+            console.print("[yellow]Removing Unbound...[/yellow]")
+            files_to_remove = [
+                "/usr/sbin/unbound",
+                "/usr/sbin/unbound-anchor",
+                "/usr/sbin/unbound-checkconf",
+                "/usr/sbin/unbound-control",
+                "/usr/sbin/unbound-control-setup",
+                "/usr/sbin/unbound-host",
+                "/etc/systemd/system/unbound.service",
+            ]
+            
+            for file_path in files_to_remove:
+                if Path(file_path).exists():
+                    Path(file_path).unlink()
+            
+            run_command(["systemctl", "daemon-reload"], check=False)
+            console.print("[green]✓[/green] Unbound removed")
+        
+        # Uninstall Python package
+        console.print("[yellow]Removing Unbound Manager Python package...[/yellow]")
+        try:
+            run_command(["pip3", "uninstall", "-y", "unbound-manager"], check=False)
+            console.print("[green]✓[/green] Unbound Manager package removed")
+        except Exception as e:
+            console.print(f"[yellow]Could not uninstall package: {e}[/yellow]")
+        
+        # Remove command from /usr/local/bin if it exists
+        manager_cmd = Path("/usr/local/bin/unbound-manager")
+        if manager_cmd.exists():
+            manager_cmd.unlink()
+            console.print("[green]✓[/green] Removed /usr/local/bin/unbound-manager")
+        
+        console.print(Panel.fit(
+            "[bold green]Uninstall Complete![/bold green]\n\n"
+            f"Configuration backup saved to: {backup_path}\n"
+            "Source directory preserved at: ~/unbound-manager\n\n"
+            "To remove source directory:\n"
+            "  rm -rf ~/unbound-manager",
+            border_style="green"
+        ))
+        
+        console.print("\n[yellow]Exiting...[/yellow]")
+        sys.exit(0)
+    
+    def update_manager(self) -> None:
+        """Update Unbound Manager to the latest version."""
+        console.print(Panel.fit(
+            "[bold cyan]Update Unbound Manager[/bold cyan]\n\n"
+            "This will update the Unbound Manager to the latest version.",
+            border_style="cyan"
+        ))
+        
+        # Check current version
+        console.print(f"[cyan]Current version:[/cyan] {APP_VERSION}")
+        
+        # Check for updates first
+        self.check_for_updates()
+        
+        # Ask if user wants to proceed with update
+        if prompt_yes_no("\nProceed with update?", default=True):
+            self.perform_update()
     
     def check_for_updates(self) -> None:
         """Check for updates from GitHub."""
@@ -245,18 +352,9 @@ class UnboundManagerCLI:
             # Create backup first
             console.print("[cyan]Creating backup before update...[/cyan]")
             
-            # Fix: Use time.time() or os.path.getctime() instead of Path.ctime
             import time
             timestamp = int(time.time())
             backup_dir = project_dir.parent / f"unbound-manager.backup.{timestamp}"
-            
-            # Alternative fix using getctime:
-            # import os
-            # if project_dir.exists():
-            #     timestamp = int(os.path.getctime(project_dir))
-            #     backup_dir = project_dir.parent / f"unbound-manager.backup.{timestamp}"
-            # else:
-            #     backup_dir = project_dir.parent / f"unbound-manager.backup.{int(time.time())}"
             
             # Stash any local changes
             console.print("[cyan]Stashing local changes...[/cyan]")
@@ -296,7 +394,7 @@ class UnboundManagerCLI:
                 if result.returncode == 0:
                     console.print("[green]✓ Python package updated[/green]")
                     
-                    # Update VERSION file
+                    # Update VERSION file if needed
                     version_file = project_dir / "VERSION"
                     if not version_file.exists():
                         version_file.write_text(APP_VERSION)
@@ -403,8 +501,12 @@ class UnboundManagerCLI:
                 self.troubleshooter.show_statistics()
             
             elif choice == "15":
-                # Check for updates
-                self.check_for_updates()
+                # Update Unbound Manager
+                self.update_manager()
+            
+            elif choice == "16":
+                # Uninstall Unbound Manager
+                self.uninstall_manager()
             
             else:
                 console.print("[red]Invalid option selected[/red]")

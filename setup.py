@@ -1,4 +1,12 @@
 from setuptools import setup, find_packages
+from pathlib import Path
+
+# Read version from VERSION file
+version_file = Path(__file__).parent / "VERSION"
+if version_file.exists():
+    version = version_file.read_text().strip()
+else:
+    version = "2.0.1"
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -8,13 +16,13 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="unbound-manager",
-    version="2.0.0",
-    author="Your Name",
+    version=version,
+    author="Regix",
     author_email="your.email@example.com",
     description="A modern Unbound DNS server management tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/unbound-manager",
+    url="https://github.com/regix1/unbound-manager",
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

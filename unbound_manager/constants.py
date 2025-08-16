@@ -3,8 +3,15 @@
 import os
 from pathlib import Path
 
+def get_app_version():
+    """Get application version from VERSION file."""
+    version_file = Path(__file__).parent.parent / "VERSION"
+    if version_file.exists():
+        return version_file.read_text().strip()
+    return "2.0.1"  # Fallback version
+
 # Version
-APP_VERSION = "2.0.0"
+APP_VERSION = get_app_version()
 
 # Paths
 UNBOUND_DIR = Path("/etc/unbound")
