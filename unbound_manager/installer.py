@@ -433,6 +433,7 @@ class UnboundInstaller:
         ensure_directory(UNBOUND_DIR)
         ensure_directory(UNBOUND_CONF_D)
         ensure_directory(UNBOUND_DIR / "backups")
+        ensure_directory(Path("/var/lib/unbound"))
         
         console.print("[green]✓[/green] Directories created")
     
