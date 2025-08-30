@@ -1,300 +1,234 @@
-# 🔒 Unbound Manager
+# Unbound Manager
 
-<div align="center">
+A comprehensive DNS server management tool for Unbound with an interactive terminal interface.
 
-[![Python Version](https://img.shields.io/badge/python-3.7%2B-blue?style=for-the-badge&logo=python)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Linux-orange?style=for-the-badge&logo=linux)](https://www.linux.org/)
-[![Unbound](https://img.shields.io/badge/Unbound-DNS-red?style=for-the-badge)](https://nlnetlabs.nl/projects/unbound/about/)
+## Overview
 
-### **A Modern DNS Server Management Tool with Beautiful Terminal UI**
+Unbound Manager simplifies the deployment and management of Unbound DNS servers by providing automated installation from source, configuration management, and ongoing maintenance through an intuitive menu-driven interface.
 
-*Simplify your Unbound DNS server deployment and management*
+### Key Features
 
-</div>
+- Compile and install Unbound from source with optimized settings
+- DNSSEC validation with automatic trust anchor management
+- Redis integration for enhanced caching performance
+- Configuration backup and restore capabilities
+- Service health monitoring and diagnostics
+- Interactive configuration editing
+- Performance testing and benchmarking
 
-## 🔄 Updates
+## Requirements
 
-### Update Everything (Manager + Unbound)
+- Ubuntu/Debian-based Linux distribution
+- Python 3.7 or higher
+- Root privileges
+- Internet connection for downloading dependencies
 
-```bash
-cd ~/unbound-manager && \
-git pull && \
-sudo pip3 install -e . --upgrade && \
-echo "✅ Update complete"
-```
+## Installation
 
----
+### Standard Installation
 
-## 🎯 What is Unbound Manager?
-
-**Unbound Manager** is a comprehensive tool that makes installing, configuring, and managing Unbound DNS servers simple and intuitive. With its beautiful terminal interface powered by Rich, it transforms complex DNS operations into easy, menu-driven workflows.
-
-### ✨ Key Features
-
-- 🚀 **One-Command Installation** - Compile and configure Unbound from source
-- 🔒 **DNSSEC Ready** - Automatic DNSSEC validation and key management
-- ⚡ **Redis Caching** - High-performance caching with Redis integration
-- 💾 **Auto Backups** - Automatic configuration backups before changes
-- 📊 **Real-time Stats** - Monitor queries, cache hits, and performance
-- 🔧 **Auto-Fix Issues** - Built-in troubleshooting and repair tools
-- 🎨 **Beautiful UI** - Rich terminal interface with colors and progress bars
-
----
-
-## 📦 Installation
-
-### Requirements
-
-- **OS**: Ubuntu/Debian-based Linux
-- **Python**: 3.7 or higher
-- **Access**: Root or sudo privileges
-
-### Quick Install
-
-Copy and paste this command to install Unbound Manager:
+Clone the repository and install:
 
 ```bash
-# Download and install Unbound Manager
-git clone https://github.com/regix1/unbound-manager.git && \
-cd unbound-manager && \
-sudo pip3 install -e . && \
-echo "✅ Installation complete! Run 'sudo unbound-manager' to start"
-```
-
-### Step-by-Step Install
-
-If you prefer to install step by step:
-
-```bash
-# Step 1: Clone the repository
 git clone https://github.com/regix1/unbound-manager.git
-
-# Step 2: Enter the directory
 cd unbound-manager
-
-# Step 3: Install the package
 sudo pip3 install -e .
-
-# Step 4: Run the manager
-sudo unbound-manager
 ```
 
----
+### System-wide Installation
 
-## 🚀 Usage
+For production deployments:
 
-### Starting the Manager
+```bash
+git clone https://github.com/regix1/unbound-manager.git
+cd unbound-manager
+sudo pip3 install .
+```
+
+## Usage
+
+Launch the manager with root privileges:
 
 ```bash
 sudo unbound-manager
 ```
 
-### Main Menu Overview
+### First-Time Setup
+
+1. Select **Option 1** - Install Unbound (compiles from source)
+2. Select **Option 5** - Configure Redis Integration (optional but recommended)
+3. Select **Option 11** - Test Unbound Functionality
+
+### Menu Structure
+
+The interface is organized into sections:
+
+- **Installation & Setup** - Install, fix, or update Unbound
+- **Configuration** - Manage DNS settings, Redis, and DNSSEC
+- **Maintenance** - Backup, restore, and manage keys
+- **Troubleshooting** - Diagnostics, testing, and log viewing
+- **System** - Service control and statistics
+
+## Configuration Files
+
+Unbound Manager creates and manages configurations in:
 
 ```
-╔════════════════════════════════════════════════════════════════╗
-║                UNBOUND DNS SERVER MANAGER                      ║
-║                     Version 2.0.1                              ║
-╚════════════════════════════════════════════════════════════════╝
-
-┌─ INSTALLATION & SETUP ──────────┐
-│ 1. Install Unbound              │
-│ 2. Fix Existing Installation    │
-│ 3. Update Unbound Version       │
-└─────────────────────────────────┘
-
-┌─ CONFIGURATION ─────────────────┐
-│ 4. Manage Configuration         │
-│ 5. Configure Redis Integration  │
-│ 6. DNSSEC Management           │
-└─────────────────────────────────┘
+/etc/unbound/
+├── unbound.conf                 # Main configuration
+├── unbound.conf.d/              # Modular configuration files
+│   ├── server.conf              # Server settings
+│   ├── dnssec.conf              # DNSSEC configuration
+│   ├── redis.conf               # Redis cache settings
+│   └── control.conf             # Remote control settings
+├── root.key                     # DNSSEC trust anchor
+├── root.hints                   # Root name servers
+└── backups/                     # Automatic backups
 ```
 
-### Quick Start - First Time Setup
-
-```bash
-# 1. Run the manager
-sudo unbound-manager
-
-# 2. Select option 1 to install Unbound
-# 3. Select option 5 to configure Redis caching
-# 4. Select option 11 to test your setup
-```
-
----
-
-## 🗑️ Uninstallation
-
-### Complete Uninstall (Remove Everything)
-
-Copy and paste this command to completely remove Unbound Manager and Unbound:
-
-```bash
-# Complete removal of Unbound Manager and Unbound DNS
-cd ~/unbound-manager && \
-sudo python3 -c "
-from unbound_manager.cli import UnboundManagerCLI
-cli = UnboundManagerCLI()
-cli.uninstall_manager()
-" || \
-(sudo pip3 uninstall -y unbound-manager && \
-sudo rm -rf ~/unbound-manager && \
-echo '✅ Unbound Manager removed')
-```
-
-### Remove Only Unbound Manager (Keep DNS Server)
-
-```bash
-# Remove only the manager, keep Unbound DNS running
-sudo pip3 uninstall -y unbound-manager && \
-sudo rm -rf ~/unbound-manager && \
-echo "✅ Manager removed. Unbound DNS still running"
-```
-
-### Remove Only Unbound DNS (Keep Manager)
-
-```bash
-# Stop and remove Unbound, keep the manager
-sudo systemctl stop unbound && \
-sudo systemctl disable unbound && \
-sudo rm -f /usr/sbin/unbound* && \
-sudo rm -rf /etc/unbound && \
-echo "✅ Unbound DNS removed. Manager still installed"
-```
-
----
-
-## 📊 Features in Detail
-
-### What Can It Do?
-
-| Feature | Description |
-|---------|-------------|
-| **Auto Install** | Downloads and compiles Unbound from source |
-| **DNSSEC** | Automatic DNSSEC validation with trust anchor updates |
-| **Redis Cache** | High-performance caching backend integration |
-| **Auto Backup** | Creates backups before any configuration change |
-| **Troubleshoot** | Diagnoses and fixes common issues automatically |
-| **Performance Test** | Benchmarks DNS query performance |
-| **Service Control** | Start/stop/restart Unbound and Redis from UI |
-| **Update Manager** | Built-in updater for both Unbound and the manager |
-
----
-
-## 🆘 Troubleshooting
-
-### Common Issues and Solutions
-
-#### ❌ "Must be run as root"
-```bash
-# Always run with sudo
-sudo unbound-manager
-```
-
-#### ❌ "Unbound service not running"
-```bash
-# The manager will detect this and offer to fix it
-sudo systemctl start unbound
-```
-
-#### ❌ "Redis connection failed"
-```bash
-# Restart Redis service
-sudo systemctl restart redis-server
-```
-
-#### ❌ "DNS resolution not working"
-```bash
-# Quick test
-dig @127.0.0.1 google.com
-```
-
----
-
-## 📁 File Locations
-
-```
-/etc/unbound/               # Main configuration directory
-├── unbound.conf           # Main config file
-├── unbound.conf.d/        # Modular configs
-├── root.key               # DNSSEC trust anchor
-├── root.hints             # Root servers list
-└── backups/               # Automatic backups
-
-~/unbound-manager/          # Manager source code
-```
-
----
-
-## 🔄 Updates
+## Updating
 
 ### Update Unbound Manager
 
+From within the application:
 ```bash
 sudo unbound-manager
-# Select: 15 (Update Unbound Manager)
+# Select Option 15 - Update Unbound Manager
+```
+
+Or manually:
+```bash
+cd ~/unbound-manager
+git pull
+sudo pip3 install -e . --upgrade
 ```
 
 ### Update Unbound DNS
 
+The manager can update Unbound to newer versions while preserving configuration:
 ```bash
 sudo unbound-manager
-# Select: 3 (Update Unbound Version)
+# Select Option 3 - Update Unbound Version
 ```
 
-### Manual Update
+## Uninstallation
+
+### Remove Unbound Manager Only
+
+Preserves Unbound DNS server and configurations:
 
 ```bash
-cd ~/unbound-manager && \
-git pull && \
-sudo pip3 install -e . --upgrade && \
-echo "✅ Update complete"
+sudo pip3 uninstall unbound-manager
+# Optional: remove source directory
+rm -rf ~/unbound-manager
 ```
 
----
+### Remove Everything
 
-## 📝 License
+Complete removal including Unbound DNS:
+
+```bash
+sudo unbound-manager
+# Select Option 16 - Uninstall Unbound Manager
+# Follow prompts to also remove Unbound DNS
+```
+
+Or manually:
+```bash
+# Stop services
+sudo systemctl stop unbound
+sudo systemctl disable unbound
+
+# Backup configuration (optional)
+sudo tar czf /root/unbound-backup-$(date +%Y%m%d).tar.gz /etc/unbound/
+
+# Remove Unbound
+sudo rm -f /usr/sbin/unbound*
+sudo rm -rf /etc/unbound
+
+# Remove manager
+sudo pip3 uninstall unbound-manager
+rm -rf ~/unbound-manager
+```
+
+## Troubleshooting
+
+### Service Issues
+
+If Unbound fails to start after configuration changes:
+```bash
+# Check configuration syntax
+sudo unbound-checkconf
+
+# View service status
+sudo systemctl status unbound
+
+# Check logs
+sudo journalctl -u unbound -n 50
+```
+
+### DNS Resolution Problems
+
+Test DNS resolution:
+```bash
+# Test using Unbound
+dig @127.0.0.1 example.com
+
+# Check if port 53 is listening
+sudo netstat -tulpn | grep :53
+```
+
+### Redis Connection Issues
+
+Verify Redis integration:
+```bash
+# Check Redis service
+sudo systemctl status redis-server
+
+# Test Redis socket
+sudo redis-cli -s /var/run/redis/redis.sock ping
+```
+
+### Permission Errors
+
+The manager must run as root:
+```bash
+sudo unbound-manager
+```
+
+## Performance Tuning
+
+Default settings are conservative. For high-traffic servers, adjust in the manager:
+
+- Increase `num-threads` to match CPU cores
+- Increase `msg-cache-size` and `rrset-cache-size` based on available RAM
+- Enable `prefetch` and `prefetch-key` for proactive cache updates
+- Configure `serve-expired` to serve stale records during outages
+
+## Project Structure
+
+```
+unbound-manager/
+├── unbound_manager/          # Core Python package
+├── data/
+│   ├── templates/           # Jinja2 configuration templates
+│   ├── configs/             # Default configurations
+│   └── systemd/             # Service definitions
+├── scripts/                 # Installation and maintenance scripts
+├── requirements.txt         # Python dependencies
+└── VERSION                  # Version tracking
+```
+
+## License
 
 MIT License - See [LICENSE](LICENSE) file for details.
 
----
+## Support
 
-## 🤝 Contributing
+Report issues: https://github.com/regix1/unbound-manager/issues
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Acknowledgments
 
-```bash
-# Fork and clone your fork
-git clone https://github.com/YOUR_USERNAME/unbound-manager.git
-cd unbound-manager
-
-# Create a feature branch
-git checkout -b feature/your-feature
-
-# Make changes and commit
-git commit -m "Add your feature"
-
-# Push and create PR
-git push origin feature/your-feature
-```
-
----
-
-## 🙏 Acknowledgments
-
-- **[NLnet Labs](https://nlnetlabs.nl/)** - For creating Unbound DNS
-- **[Rich](https://github.com/Textualize/rich)** - For the beautiful terminal UI
-- **[Redis](https://redis.io/)** - For the caching backend
-
----
-
-<div align="center">
-
-### ⭐ Star this project if you find it helpful!
-
-**[Report Issues](https://github.com/regix1/unbound-manager/issues)** • **[Discussions](https://github.com/regix1/unbound-manager/discussions)**
-
-Made with ❤️ for the DNS community
-
-</div>
+- NLnet Labs for Unbound DNS
+- Rich library for terminal UI
+- Redis for caching backend
