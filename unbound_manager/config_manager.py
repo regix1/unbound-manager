@@ -1,6 +1,7 @@
 """Configuration management for Unbound with editing capabilities."""
 
 import os
+import time
 import shutil
 import tempfile
 import subprocess
@@ -27,7 +28,7 @@ class ConfigManager:
     def __init__(self):
         """Initialize the configuration manager."""
         # Setup Jinja2 environment
-        template_dir = Path(__file__).parent.parent / "templates"
+        template_dir = Path(__file__).parent.parent / "data" / "templates"
         self.env = Environment(
             loader=FileSystemLoader(template_dir),
             trim_blocks=True,

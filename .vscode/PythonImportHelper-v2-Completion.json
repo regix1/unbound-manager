@@ -1,5 +1,102 @@
 [
     {
+        "label": "re",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "re",
+        "description": "re",
+        "detail": "re",
+        "documentation": {}
+    },
+    {
+        "label": "Path",
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "isExtraImport": true,
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
+        "label": "Path",
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "isExtraImport": true,
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
+        "label": "Path",
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "isExtraImport": true,
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
+        "label": "Path",
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "isExtraImport": true,
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
+        "label": "Path",
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "isExtraImport": true,
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
+        "label": "Path",
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "isExtraImport": true,
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
+        "label": "Path",
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "isExtraImport": true,
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
+        "label": "Path",
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "isExtraImport": true,
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
+        "label": "Path",
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "isExtraImport": true,
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
+        "label": "Path",
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "isExtraImport": true,
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
+        "label": "Path",
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "isExtraImport": true,
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
         "label": "shutil",
         "kind": 6,
         "isExtraImport": true,
@@ -23,86 +120,6 @@
         "description": "datetime",
         "isExtraImport": true,
         "detail": "datetime",
-        "documentation": {}
-    },
-    {
-        "label": "Path",
-        "importPath": "pathlib",
-        "description": "pathlib",
-        "isExtraImport": true,
-        "detail": "pathlib",
-        "documentation": {}
-    },
-    {
-        "label": "Path",
-        "importPath": "pathlib",
-        "description": "pathlib",
-        "isExtraImport": true,
-        "detail": "pathlib",
-        "documentation": {}
-    },
-    {
-        "label": "Path",
-        "importPath": "pathlib",
-        "description": "pathlib",
-        "isExtraImport": true,
-        "detail": "pathlib",
-        "documentation": {}
-    },
-    {
-        "label": "Path",
-        "importPath": "pathlib",
-        "description": "pathlib",
-        "isExtraImport": true,
-        "detail": "pathlib",
-        "documentation": {}
-    },
-    {
-        "label": "Path",
-        "importPath": "pathlib",
-        "description": "pathlib",
-        "isExtraImport": true,
-        "detail": "pathlib",
-        "documentation": {}
-    },
-    {
-        "label": "Path",
-        "importPath": "pathlib",
-        "description": "pathlib",
-        "isExtraImport": true,
-        "detail": "pathlib",
-        "documentation": {}
-    },
-    {
-        "label": "Path",
-        "importPath": "pathlib",
-        "description": "pathlib",
-        "isExtraImport": true,
-        "detail": "pathlib",
-        "documentation": {}
-    },
-    {
-        "label": "Path",
-        "importPath": "pathlib",
-        "description": "pathlib",
-        "isExtraImport": true,
-        "detail": "pathlib",
-        "documentation": {}
-    },
-    {
-        "label": "Path",
-        "importPath": "pathlib",
-        "description": "pathlib",
-        "isExtraImport": true,
-        "detail": "pathlib",
-        "documentation": {}
-    },
-    {
-        "label": "Path",
-        "importPath": "pathlib",
-        "description": "pathlib",
-        "isExtraImport": true,
-        "detail": "pathlib",
         "documentation": {}
     },
     {
@@ -844,6 +861,15 @@
         "documentation": {}
     },
     {
+        "label": "fix_boolean_values",
+        "kind": 2,
+        "importPath": "scripts.fix_boolean_config",
+        "description": "scripts.fix_boolean_config",
+        "peekOfCode": "def fix_boolean_values():\n    \"\"\"Fix boolean values in server.conf.\"\"\"\n    server_conf = Path(\"/etc/unbound/unbound.conf.d/server.conf\")\n    if not server_conf.exists():\n        print(\"Server configuration not found\")\n        return False\n    with open(server_conf, 'r') as f:\n        content = f.read()\n    # Replace boolean values\n    replacements = [",
+        "detail": "scripts.fix_boolean_config",
+        "documentation": {}
+    },
+    {
         "label": "BackupManager",
         "kind": 6,
         "importPath": "unbound_manager.backup",
@@ -893,7 +919,7 @@
         "kind": 6,
         "importPath": "unbound_manager.config_manager",
         "description": "unbound_manager.config_manager",
-        "peekOfCode": "class ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment\n        template_dir = Path(__file__).parent.parent / \"templates\"\n        self.env = Environment(\n            loader=FileSystemLoader(template_dir),\n            trim_blocks=True,\n            lstrip_blocks=True,",
+        "peekOfCode": "class ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment\n        template_dir = Path(__file__).parent.parent / \"data\" / \"templates\"\n        self.env = Environment(\n            loader=FileSystemLoader(template_dir),\n            trim_blocks=True,\n            lstrip_blocks=True,",
         "detail": "unbound_manager.config_manager",
         "documentation": {}
     },
@@ -902,7 +928,7 @@
         "kind": 5,
         "importPath": "unbound_manager.config_manager",
         "description": "unbound_manager.config_manager",
-        "peekOfCode": "console = Console()\nclass ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment\n        template_dir = Path(__file__).parent.parent / \"templates\"\n        self.env = Environment(\n            loader=FileSystemLoader(template_dir),\n            trim_blocks=True,",
+        "peekOfCode": "console = Console()\nclass ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment\n        template_dir = Path(__file__).parent.parent / \"data\" / \"templates\"\n        self.env = Environment(\n            loader=FileSystemLoader(template_dir),\n            trim_blocks=True,",
         "detail": "unbound_manager.config_manager",
         "documentation": {}
     },
@@ -911,7 +937,7 @@
         "kind": 2,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "def get_app_version():\n    \"\"\"Get application version from VERSION file.\"\"\"\n    version_file = Path(__file__).parent.parent / \"VERSION\"\n    if version_file.exists():\n        return version_file.read_text().strip()\n    return \"2.0.1\"  # Fallback version\n# Version\nAPP_VERSION = get_app_version()\n# Paths\nUNBOUND_DIR = Path(\"/etc/unbound\")",
+        "peekOfCode": "def get_app_version():\n    \"\"\"Get application version from VERSION file.\"\"\"\n    version_file = Path(__file__).parent.parent / \"VERSION\"\n    if version_file.exists():\n        return version_file.read_text().strip()\n    return \"2.0.5\"  # Updated fallback version\n# Version\nAPP_VERSION = get_app_version()\n# Paths\nUNBOUND_DIR = Path(\"/etc/unbound\")",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -920,7 +946,7 @@
         "kind": 5,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "APP_VERSION = get_app_version()\n# Paths\nUNBOUND_DIR = Path(\"/etc/unbound\")\nUNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")",
+        "peekOfCode": "APP_VERSION = get_app_version()\n# Paths\nUNBOUND_DIR = Path(\"/etc/unbound\")\nUNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -929,7 +955,7 @@
         "kind": 5,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "UNBOUND_DIR = Path(\"/etc/unbound\")\nUNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd",
+        "peekOfCode": "UNBOUND_DIR = Path(\"/etc/unbound\")\nUNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -938,7 +964,7 @@
         "kind": 5,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "UNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")",
+        "peekOfCode": "UNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -947,7 +973,7 @@
         "kind": 5,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "UNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs",
+        "peekOfCode": "UNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -956,7 +982,7 @@
         "kind": 5,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "BACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs\nUNBOUND_RELEASES_URL = \"https://api.github.com/repos/NLnetLabs/unbound/releases\"",
+        "peekOfCode": "BACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -965,7 +991,7 @@
         "kind": 5,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "ROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs\nUNBOUND_RELEASES_URL = \"https://api.github.com/repos/NLnetLabs/unbound/releases\"\nROOT_HINTS_URL = \"https://www.internic.net/domain/named.cache\"",
+        "peekOfCode": "ROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -974,7 +1000,43 @@
         "kind": 5,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "ROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs\nUNBOUND_RELEASES_URL = \"https://api.github.com/repos/NLnetLabs/unbound/releases\"\nROOT_HINTS_URL = \"https://www.internic.net/domain/named.cache\"\nROOT_HINTS_BACKUP_URL = \"https://www.dns.icann.org/services/tools/internic/domain/named.cache\"",
+        "peekOfCode": "ROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")",
+        "detail": "unbound_manager.constants",
+        "documentation": {}
+    },
+    {
+        "label": "DATA_DIR",
+        "kind": 5,
+        "importPath": "unbound_manager.constants",
+        "description": "unbound_manager.constants",
+        "peekOfCode": "DATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs",
+        "detail": "unbound_manager.constants",
+        "documentation": {}
+    },
+    {
+        "label": "TEMPLATES_DIR",
+        "kind": 5,
+        "importPath": "unbound_manager.constants",
+        "description": "unbound_manager.constants",
+        "peekOfCode": "TEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs\nUNBOUND_RELEASES_URL = \"https://api.github.com/repos/NLnetLabs/unbound/releases\"",
+        "detail": "unbound_manager.constants",
+        "documentation": {}
+    },
+    {
+        "label": "CONFIGS_DIR",
+        "kind": 5,
+        "importPath": "unbound_manager.constants",
+        "description": "unbound_manager.constants",
+        "peekOfCode": "CONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs\nUNBOUND_RELEASES_URL = \"https://api.github.com/repos/NLnetLabs/unbound/releases\"\nROOT_HINTS_URL = \"https://www.internic.net/domain/named.cache\"",
+        "detail": "unbound_manager.constants",
+        "documentation": {}
+    },
+    {
+        "label": "SYSTEMD_DIR",
+        "kind": 5,
+        "importPath": "unbound_manager.constants",
+        "description": "unbound_manager.constants",
+        "peekOfCode": "SYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs\nUNBOUND_RELEASES_URL = \"https://api.github.com/repos/NLnetLabs/unbound/releases\"\nROOT_HINTS_URL = \"https://www.internic.net/domain/named.cache\"\nROOT_HINTS_BACKUP_URL = \"https://www.dns.icann.org/services/tools/internic/domain/named.cache\"",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -1307,7 +1369,34 @@
         "kind": 5,
         "importPath": "setup",
         "description": "setup",
-        "peekOfCode": "version_file = Path(__file__).parent / \"VERSION\"\nif version_file.exists():\n    version = version_file.read_text().strip()\nelse:\n    version = \"2.0.1\"\nwith open(\"README.md\", \"r\", encoding=\"utf-8\") as fh:\n    long_description = fh.read()\nwith open(\"requirements.txt\", \"r\", encoding=\"utf-8\") as fh:\n    requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nsetup(",
+        "peekOfCode": "version_file = Path(__file__).parent / \"VERSION\"\nversion = version_file.read_text().strip() if version_file.exists() else \"2.0.5\"\nreadme_file = Path(__file__).parent / \"README.md\"\nlong_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\nwith open(\"requirements.txt\", \"r\", encoding=\"utf-8\") as fh:\n    requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nsetup(\n    name=\"unbound-manager\",\n    version=version,\n    author=\"Regix\",",
+        "detail": "setup",
+        "documentation": {}
+    },
+    {
+        "label": "version",
+        "kind": 5,
+        "importPath": "setup",
+        "description": "setup",
+        "peekOfCode": "version = version_file.read_text().strip() if version_file.exists() else \"2.0.5\"\nreadme_file = Path(__file__).parent / \"README.md\"\nlong_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\nwith open(\"requirements.txt\", \"r\", encoding=\"utf-8\") as fh:\n    requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nsetup(\n    name=\"unbound-manager\",\n    version=version,\n    author=\"Regix\",\n    description=\"A modern Unbound DNS server management tool\",",
+        "detail": "setup",
+        "documentation": {}
+    },
+    {
+        "label": "readme_file",
+        "kind": 5,
+        "importPath": "setup",
+        "description": "setup",
+        "peekOfCode": "readme_file = Path(__file__).parent / \"README.md\"\nlong_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\nwith open(\"requirements.txt\", \"r\", encoding=\"utf-8\") as fh:\n    requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nsetup(\n    name=\"unbound-manager\",\n    version=version,\n    author=\"Regix\",\n    description=\"A modern Unbound DNS server management tool\",\n    long_description=long_description,",
+        "detail": "setup",
+        "documentation": {}
+    },
+    {
+        "label": "long_description",
+        "kind": 5,
+        "importPath": "setup",
+        "description": "setup",
+        "peekOfCode": "long_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\nwith open(\"requirements.txt\", \"r\", encoding=\"utf-8\") as fh:\n    requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nsetup(\n    name=\"unbound-manager\",\n    version=version,\n    author=\"Regix\",\n    description=\"A modern Unbound DNS server management tool\",\n    long_description=long_description,\n    long_description_content_type=\"text/markdown\",",
         "detail": "setup",
         "documentation": {}
     }

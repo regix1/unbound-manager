@@ -6,11 +6,11 @@ server:
     interface: 127.0.0.1
     port: 53
     ip-freebind: yes
-    do-ip4: {{ do_ip4 | lower }}
-    do-ip6: {{ do_ip6 | lower }}
-    do-udp: {{ do_udp | lower }}
-    do-tcp: {{ do_tcp | lower }}
-    prefer-ip6: {{ prefer_ip6 | lower }}
+    do-ip4: {% if do_ip4 %}yes{% else %}no{% endif %}
+    do-ip6: {% if do_ip6 %}yes{% else %}no{% endif %}
+    do-udp: {% if do_udp %}yes{% else %}no{% endif %}
+    do-tcp: {% if do_tcp %}yes{% else %}no{% endif %}
+    prefer-ip6: {% if prefer_ip6 %}yes{% else %}no{% endif %}
     use-syslog: yes
     
     # Performance tuning

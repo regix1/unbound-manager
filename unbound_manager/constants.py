@@ -8,7 +8,7 @@ def get_app_version():
     version_file = Path(__file__).parent.parent / "VERSION"
     if version_file.exists():
         return version_file.read_text().strip()
-    return "2.0.1"  # Fallback version
+    return "2.0.5"  # Updated fallback version
 
 # Version
 APP_VERSION = get_app_version()
@@ -20,6 +20,10 @@ UNBOUND_CONF_D = UNBOUND_DIR / "unbound.conf.d"
 BACKUP_DIR = UNBOUND_DIR / "backups"
 ROOT_KEY = UNBOUND_DIR / "root.key"
 ROOT_HINTS = UNBOUND_DIR / "root.hints"
+DATA_DIR = Path(__file__).parent.parent / "data"
+TEMPLATES_DIR = DATA_DIR / "templates"
+CONFIGS_DIR = DATA_DIR / "configs"
+SYSTEMD_DIR = DATA_DIR / "systemd"
 
 # Redis
 REDIS_SOCKET = Path("/var/run/redis/redis.sock")

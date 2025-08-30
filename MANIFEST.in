@@ -1,0 +1,8 @@
+include VERSION
+include README.md
+include LICENSE
+include requirements.txt
+recursive-include data *
+recursive-include scripts *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
