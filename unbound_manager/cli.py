@@ -277,6 +277,10 @@ class UnboundManagerCLI:
                 else:
                     console.print("\n[green]✓ You are running the latest version[/green]")
                     
+                    # Check if there are uncommitted changes in git
+                    if prompt_yes_no("\nCheck for git updates anyway?", default=False):
+                        self.check_git_updates()
+                        
             elif response.status_code == 404:
                 # Try master branch if main doesn't exist
                 response = requests.get(
@@ -296,14 +300,15 @@ class UnboundManagerCLI:
                             self.perform_update()
                     else:
                         console.print("\n[green]✓ You are running the latest version[/green]")
+                        
+                        if prompt_yes_no("\nCheck for git updates anyway?", default=False):
+                            self.check_git_updates()
                 else:
-                    # Fallback to git-based checking
                     console.print("[yellow]Could not fetch VERSION from GitHub[/yellow]")
                     self.check_git_updates()
                     
         except requests.exceptions.RequestException as e:
             console.print(f"[yellow]Could not connect to GitHub: {e}[/yellow]")
-            # Fallback to git-based checking
             self.check_git_updates()
             
         except ImportError:

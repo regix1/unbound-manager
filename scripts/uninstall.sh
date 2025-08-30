@@ -6,10 +6,12 @@ set -e
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-echo -e "${YELLOW}Unbound Manager Uninstaller${NC}"
-echo "=============================="
+echo -e "${CYAN}╔════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}║     Unbound Manager Uninstaller       ║${NC}"
+echo -e "${CYAN}╚════════════════════════════════════════╝${NC}"
 echo
 
 # Check if running as root
@@ -73,5 +75,84 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${GREEN}✓${NC} Unbound removed"
 fi
 
+# Ask about removing Redis
 echo
-echo -e "${GREEN}Uninstall complete!${NC}"
+echo -e "${YELLOW}Do you want to remove Redis server?${NC}"
+echo -e "${CYAN}Redis was installed for caching support${NC}"
+read -p "Remove Redis? (y/n): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    systemctl stop redis-server 2>/dev/null || true
+    systemctl disable redis-server 2>/dev/null || true
+    
+    # Remove Redis
+    apt-get remove -y redis-server redis-tools 2>/dev/null || true
+    apt-get autoremove -y 2>/dev/null || true
+    
+    # Remove Redis configuration
+    rm -rf /etc/redis
+    rm -rf /var/lib/redis
+    rm -rf /var/log/redis
+    rm -rf /var/run/redis
+    
+    echo -e "${GREEN}✓${NC} Redis removed"
+fi
+
+# Ask about removing other dependencies
+echo
+echo -e "${YELLOW}Do you want to remove build dependencies?${NC}"
+echo -e "${CYAN}These include: build-essential, libssl-dev, libexpat1-dev, etc.${NC}"
+echo -e "${RED}WARNING: Other applications may depend on these packages!${NC}"
+read -p "Remove build dependencies? (y/n): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    # List of packages installed by unbound-manager
+    PACKAGES=(
+        "build-essential"
+        "libssl-dev"
+        "libexpat1-dev"
+        "libevent-dev"
+        "libhiredis-dev"
+        "libnghttp2-dev"
+        "libsystemd-dev"
+        "swig"
+        "protobuf-c-compiler"
+        "libprotobuf-c-dev"
+    )
+    
+    echo -e "${YELLOW}Removing development packages...${NC}"
+    for pkg in "${PACKAGES[@]}"; do
+        apt-get remove -y "$pkg" 2>/dev/null || true
+    done
+    
+    apt-get autoremove -y 2>/dev/null || true
+    echo -e "${GREEN}✓${NC} Development packages removed"
+fi
+
+# Clean up Python packages
+echo
+echo -e "${YELLOW}Do you want to remove Python dependencies?${NC}"
+echo -e "${CYAN}These include: rich, jinja2, pyyaml, dnspython, etc.${NC}"
+echo -e "${RED}WARNING: Other Python applications may use these!${NC}"
+read -p "Remove Python dependencies? (y/n): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    pip3 uninstall -y rich typer jinja2 pyyaml requests dnspython redis psutil 2>/dev/null || true
+    echo -e "${GREEN}✓${NC} Python dependencies removed"
+fi
+
+echo
+echo -e "${GREEN}╔════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║        Uninstall Complete!             ║${NC}"
+echo -e "${GREEN}╚════════════════════════════════════════╝${NC}"
+
+# Final summary
+echo
+echo -e "${CYAN}Summary of actions:${NC}"
+echo -e "  • Unbound Manager package removed"
+[[ ! -d ~/unbound-manager ]] && echo -e "  • Source directory removed"
+[[ ! -f /usr/sbin/unbound ]] && echo -e "  • Unbound DNS server removed"
+[[ ! -f /usr/bin/redis-server ]] && echo -e "  • Redis server removed"
+
+echo
+echo -e "${YELLOW}Thank you for using Unbound Manager!${NC}"
