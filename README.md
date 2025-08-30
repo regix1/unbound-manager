@@ -25,11 +25,11 @@ Unbound Manager simplifies the deployment and management of Unbound DNS servers 
 
 ## Installation
 
-**Note:** All commands require root privileges. If you're not logged in as root, prefix commands with `sudo`.
+### Installation Methods
 
-### Standard Installation
+#### Development Install (Recommended - Supports Auto-Updates)
 
-Clone the repository and install:
+This method maintains the git repository connection, allowing automatic updates through the manager:
 
 ```bash
 git clone https://github.com/regix1/unbound-manager.git
@@ -37,15 +37,17 @@ cd unbound-manager
 pip3 install -e .
 ```
 
-### System-wide Installation
+#### Production Install (Manual Updates Only)
 
-For production deployments:
+This method copies files to Python's site-packages directory. Updates must be performed manually:
 
 ```bash
 git clone https://github.com/regix1/unbound-manager.git
 cd unbound-manager
 pip3 install .
 ```
+
+**Note:** All commands require root privileges. If not running as root, prefix commands with `sudo`.
 
 ## Usage
 
@@ -55,7 +57,7 @@ Launch the manager as root:
 unbound-manager
 ```
 
-If not running as root, use:
+If not running as root:
 ```bash
 sudo unbound-manager
 ```
@@ -76,9 +78,9 @@ The interface is organized into sections:
 - **Troubleshooting** - Diagnostics, testing, and log viewing
 - **System** - Service control and statistics
 
-## Configuration Files
+## Configuration
 
-Unbound Manager creates and manages configurations in:
+Unbound Manager creates and manages configurations in `/etc/unbound/`:
 
 ```
 /etc/unbound/
@@ -95,9 +97,12 @@ Unbound Manager creates and manages configurations in:
 
 ## Updating
 
-### Update Unbound Manager
+### Update Methods Based on Installation Type
 
-From within the application:
+#### For Development Installs
+
+Automatic updates are available through the manager:
+
 ```bash
 unbound-manager
 # Select Option 15 - Update Unbound Manager
@@ -110,9 +115,30 @@ git pull
 pip3 install -e . --upgrade
 ```
 
+#### For Production Installs
+
+Manual update required:
+
+```bash
+cd ~/unbound-manager
+git pull
+pip3 install . --upgrade
+```
+
+Or reinstall:
+```bash
+pip3 uninstall unbound-manager
+cd ~
+rm -rf unbound-manager
+git clone https://github.com/regix1/unbound-manager.git
+cd unbound-manager
+pip3 install .
+```
+
 ### Update Unbound DNS
 
 The manager can update Unbound to newer versions while preserving configuration:
+
 ```bash
 unbound-manager
 # Select Option 3 - Update Unbound Version
@@ -126,8 +152,7 @@ Preserves Unbound DNS server and configurations:
 
 ```bash
 pip3 uninstall unbound-manager
-# Optional: remove source directory
-rm -rf ~/unbound-manager
+rm -rf ~/unbound-manager  # Optional: remove source directory
 ```
 
 ### Remove Everything
@@ -140,7 +165,7 @@ unbound-manager
 # Follow prompts to also remove Unbound DNS
 ```
 
-Or manually:
+Manual complete removal:
 ```bash
 # Stop services
 systemctl stop unbound
@@ -160,56 +185,58 @@ rm -rf ~/unbound-manager
 
 ## Troubleshooting
 
-### Service Issues
+### Common Issues
 
-If Unbound fails to start after configuration changes:
+#### Service Won't Start
+
+Check configuration syntax:
 ```bash
-# Check configuration syntax
 unbound-checkconf
+```
 
-# View service status
+View service status and logs:
+```bash
 systemctl status unbound
-
-# Check logs
 journalctl -u unbound -n 50
 ```
 
-### DNS Resolution Problems
+#### DNS Resolution Not Working
 
 Test DNS resolution:
 ```bash
-# Test using Unbound
 dig @127.0.0.1 example.com
+```
 
-# Check if port 53 is listening
+Check if port 53 is listening:
+```bash
 netstat -tulpn | grep :53
 ```
 
-### Redis Connection Issues
+#### Redis Connection Failed
 
-Verify Redis integration:
+Verify Redis service:
 ```bash
-# Check Redis service
 systemctl status redis-server
-
-# Test Redis socket
 redis-cli -s /var/run/redis/redis.sock ping
 ```
 
-### Permission Errors
+#### Permission Denied
 
-The manager requires root privileges. If you see permission errors:
-- Log in as root, or
-- Use `sudo unbound-manager`
+The manager requires root privileges. Use `sudo unbound-manager` or run as root.
+
+#### Auto-Update Not Working
+
+Auto-updates only work with development installs (`pip3 install -e .`). For production installs, updates must be performed manually.
 
 ## Performance Tuning
 
-Default settings are conservative. For high-traffic servers, adjust in the manager:
+Default settings are conservative. For high-traffic servers, adjust these settings through the manager:
 
-- Increase `num-threads` to match CPU cores
-- Increase `msg-cache-size` and `rrset-cache-size` based on available RAM
-- Enable `prefetch` and `prefetch-key` for proactive cache updates
-- Configure `serve-expired` to serve stale records during outages
+- **num-threads**: Set to number of CPU cores
+- **msg-cache-size**: Increase based on available RAM (e.g., 256m, 512m)
+- **rrset-cache-size**: Set to 2x msg-cache-size
+- **prefetch**: Enable for proactive cache updates
+- **serve-expired**: Enable to serve stale records during outages
 
 ## Project Structure
 
@@ -221,8 +248,11 @@ unbound-manager/
 │   ├── configs/             # Default configurations
 │   └── systemd/             # Service definitions
 ├── scripts/                 # Installation and maintenance scripts
+├── tests/                   # Test suite
 ├── requirements.txt         # Python dependencies
-└── VERSION                  # Version tracking
+├── setup.py                 # Package configuration
+├── VERSION                  # Version tracking
+└── README.md               # This file
 ```
 
 ## License
@@ -231,7 +261,8 @@ MIT License - See [LICENSE](LICENSE) file for details.
 
 ## Support
 
-Report issues: https://github.com/regix1/unbound-manager/issues
+- Report issues: https://github.com/regix1/unbound-manager/issues
+- Discussions: https://github.com/regix1/unbound-manager/discussions
 
 ## Acknowledgments
 

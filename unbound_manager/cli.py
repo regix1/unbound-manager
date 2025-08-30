@@ -343,6 +343,40 @@ class UnboundManagerCLI:
         console.print("\n[cyan]Starting update process...[/cyan]")
         
         try:
+            # Check if this is a development install
+            import site
+            import sys
+            
+            # Get the actual location of this file
+            current_file = Path(__file__).resolve()
+            
+            # Check if we're in site-packages (global install)
+            site_packages_paths = site.getsitepackages() + [site.getusersitepackages()]
+            is_global_install = any(str(current_file).startswith(str(Path(p).resolve())) 
+                                for p in site_packages_paths if p)
+            
+            if is_global_install:
+                console.print("[yellow]Detected global installation.[/yellow]")
+                console.print("[cyan]For global installs, update by reinstalling:[/cyan]")
+                console.print()
+                console.print("  # Option 1: Update from existing source")
+                console.print("  cd ~/unbound-manager")
+                console.print("  git pull")
+                console.print("  pip3 install . --upgrade")
+                console.print()
+                console.print("  # Option 2: Fresh install")
+                console.print("  pip3 uninstall unbound-manager")
+                console.print("  cd ~")
+                console.print("  rm -rf unbound-manager")
+                console.print("  git clone https://github.com/regix1/unbound-manager.git")
+                console.print("  cd unbound-manager")
+                console.print("  pip3 install .")
+                console.print()
+                console.print("[yellow]Note: For auto-updates, use development install:[/yellow]")
+                console.print("  pip3 install -e .")
+                return
+            
+            # For development installs, proceed with git update
             project_dir = Path(__file__).parent.parent
             
             # Check if git repository exists
@@ -350,51 +384,50 @@ class UnboundManagerCLI:
                 console.print("[yellow]Git repository not found. Attempting to reinitialize...[/yellow]")
                 
                 # Try to reinitialize git
-                try:
-                    run_command(["git", "init"], cwd=project_dir, check=False)
-                    run_command(
-                        ["git", "remote", "add", "origin", "https://github.com/regix1/unbound-manager.git"],
-                        cwd=project_dir,
-                        check=False
-                    )
-                    run_command(["git", "fetch", "origin"], cwd=project_dir, check=False)
-                    
-                    # Try to determine current branch from VERSION or default to main
-                    result = run_command(
-                        ["git", "branch", "-r"],
-                        cwd=project_dir,
-                        check=False
-                    )
-                    
-                    if "origin/main" in result.stdout:
-                        branch = "main"
-                    else:
-                        branch = "master"
-                    
-                    console.print(f"[cyan]Resetting to origin/{branch}...[/cyan]")
-                    result = run_command(
-                        ["git", "reset", "--hard", f"origin/{branch}"],
-                        cwd=project_dir,
-                        check=False
-                    )
-                    
-                    if result.returncode == 0:
-                        console.print("[green]✓ Git repository reinitialized[/green]")
-                    else:
-                        raise Exception("Could not reset to origin")
-                        
-                except Exception as e:
-                    console.print("[red]Could not reinitialize git repository[/red]")
-                    console.print("[yellow]Please reinstall from GitHub:[/yellow]")
+                result = run_command(["git", "init"], cwd=project_dir, check=False)
+                if result.returncode != 0:
+                    console.print("[red]Cannot initialize git in this directory[/red]")
+                    console.print("[yellow]Reinstall with development mode for auto-updates:[/yellow]")
                     console.print("  cd ~")
-                    console.print("  mv unbound-manager unbound-manager.old")
+                    console.print("  rm -rf unbound-manager")
                     console.print("  git clone https://github.com/regix1/unbound-manager.git")
                     console.print("  cd unbound-manager")
                     console.print("  pip3 install -e .")
                     return
+                
+                # Add remote
+                run_command(
+                    ["git", "remote", "add", "origin", "https://github.com/regix1/unbound-manager.git"],
+                    cwd=project_dir,
+                    check=False
+                )
+                
+                # Fetch
+                result = run_command(["git", "fetch", "origin"], cwd=project_dir, check=False)
+                if result.returncode != 0:
+                    console.print("[red]Cannot fetch from repository[/red]")
+                    return
+                
+                # Determine branch
+                result = run_command(["git", "branch", "-r"], cwd=project_dir, check=False)
+                branch = "main" if "origin/main" in result.stdout else "master"
+                
+                # Reset to origin
+                console.print(f"[cyan]Resetting to origin/{branch}...[/cyan]")
+                result = run_command(
+                    ["git", "reset", "--hard", f"origin/{branch}"],
+                    cwd=project_dir,
+                    check=False
+                )
+                
+                if result.returncode != 0:
+                    console.print("[red]Could not reset to origin[/red]")
+                    return
+                    
+                console.print("[green]✓ Git repository reinitialized[/green]")
             
-            # Continue with normal update process
-            console.print("[cyan]Fetching latest version...[/cyan]")
+            # Normal update process for development installs
+            console.print("[cyan]Fetching latest changes...[/cyan]")
             
             # Ensure origin exists
             run_command(
@@ -403,35 +436,33 @@ class UnboundManagerCLI:
                 check=False
             )
             
-            # Fetch latest
-            result = run_command(
-                ["git", "fetch", "origin"],
-                cwd=project_dir,
-                check=False
-            )
-            
+            # Fetch
+            result = run_command(["git", "fetch", "origin"], cwd=project_dir, check=False)
             if result.returncode != 0:
-                console.print("[red]Could not fetch updates. Check your internet connection.[/red]")
+                console.print("[red]Could not fetch updates[/red]")
                 return
             
             # Determine branch
+            result = run_command(["git", "branch", "-r"], cwd=project_dir, check=False)
+            branch = "main" if "origin/main" in result.stdout else "master"
+            
+            # Check for updates
             result = run_command(
-                ["git", "branch", "-r"],
+                ["git", "rev-list", f"HEAD...origin/{branch}", "--count"],
                 cwd=project_dir,
                 check=False
             )
             
-            if "origin/main" in result.stdout:
-                branch = "main"
-            else:
-                branch = "master"
+            if result.returncode == 0 and result.stdout.strip() == "0":
+                console.print("[green]Already up to date![/green]")
+                return
             
-            # Save any local modifications
-            console.print("[cyan]Saving any local modifications...[/cyan]")
+            # Stash local changes
+            console.print("[cyan]Saving local changes...[/cyan]")
             run_command(["git", "stash"], cwd=project_dir, check=False)
             
-            # Reset to origin
-            console.print(f"[cyan]Updating to latest version from {branch}...[/cyan]")
+            # Update
+            console.print(f"[cyan]Updating from {branch}...[/cyan]")
             result = run_command(
                 ["git", "reset", "--hard", f"origin/{branch}"],
                 cwd=project_dir,
@@ -439,31 +470,20 @@ class UnboundManagerCLI:
             )
             
             if result.returncode != 0:
-                console.print("[red]Update failed. Manual intervention required.[/red]")
-                console.print("[yellow]Try:[/yellow]")
-                console.print("  cd ~/unbound-manager")
-                console.print("  git fetch origin")
-                console.print(f"  git reset --hard origin/{branch}")
-                console.print("  pip3 install -e .")
+                console.print("[red]Update failed[/red]")
                 return
             
-            console.print("[green]✓ Code updated successfully[/green]")
+            console.print("[green]✓ Code updated[/green]")
             
             # Reinstall package
-            console.print("[cyan]Reinstalling Python package...[/cyan]")
-            result = run_command(
-                ["pip3", "install", "-e", "."],
-                cwd=project_dir,
-                check=False
-            )
+            console.print("[cyan]Updating Python package...[/cyan]")
+            result = run_command(["pip3", "install", "-e", "."], cwd=project_dir, check=False)
             
             if result.returncode == 0:
                 version_file = project_dir / "VERSION"
                 if version_file.exists():
                     new_version = version_file.read_text().strip()
                     console.print(f"[green]✓ Updated to version {new_version}![/green]")
-                else:
-                    console.print("[green]✓ Update complete![/green]")
                 
                 console.print("[yellow]Restart unbound-manager to use the new version[/yellow]")
                 
@@ -473,11 +493,10 @@ class UnboundManagerCLI:
                     import sys
                     os.execv(sys.executable, [sys.executable] + sys.argv)
             else:
-                console.print("[yellow]Could not reinstall package. Try: pip3 install -e ~/unbound-manager[/yellow]")
+                console.print("[yellow]Could not update package[/yellow]")
                 
         except Exception as e:
             console.print(f"[red]Update error: {e}[/red]")
-            console.print("[yellow]Manual update required. See instructions above.[/yellow]")
     
     def handle_choice(self, choice: str) -> bool:
         """
