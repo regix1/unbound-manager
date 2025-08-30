@@ -25,6 +25,8 @@ Unbound Manager simplifies the deployment and management of Unbound DNS servers 
 
 ## Installation
 
+**Note:** All commands require root privileges. If you're not logged in as root, prefix commands with `sudo`.
+
 ### Standard Installation
 
 Clone the repository and install:
@@ -32,7 +34,7 @@ Clone the repository and install:
 ```bash
 git clone https://github.com/regix1/unbound-manager.git
 cd unbound-manager
-sudo pip3 install -e .
+pip3 install -e .
 ```
 
 ### System-wide Installation
@@ -42,13 +44,18 @@ For production deployments:
 ```bash
 git clone https://github.com/regix1/unbound-manager.git
 cd unbound-manager
-sudo pip3 install .
+pip3 install .
 ```
 
 ## Usage
 
-Launch the manager with root privileges:
+Launch the manager as root:
 
+```bash
+unbound-manager
+```
+
+If not running as root, use:
 ```bash
 sudo unbound-manager
 ```
@@ -92,7 +99,7 @@ Unbound Manager creates and manages configurations in:
 
 From within the application:
 ```bash
-sudo unbound-manager
+unbound-manager
 # Select Option 15 - Update Unbound Manager
 ```
 
@@ -100,14 +107,14 @@ Or manually:
 ```bash
 cd ~/unbound-manager
 git pull
-sudo pip3 install -e . --upgrade
+pip3 install -e . --upgrade
 ```
 
 ### Update Unbound DNS
 
 The manager can update Unbound to newer versions while preserving configuration:
 ```bash
-sudo unbound-manager
+unbound-manager
 # Select Option 3 - Update Unbound Version
 ```
 
@@ -118,7 +125,7 @@ sudo unbound-manager
 Preserves Unbound DNS server and configurations:
 
 ```bash
-sudo pip3 uninstall unbound-manager
+pip3 uninstall unbound-manager
 # Optional: remove source directory
 rm -rf ~/unbound-manager
 ```
@@ -128,7 +135,7 @@ rm -rf ~/unbound-manager
 Complete removal including Unbound DNS:
 
 ```bash
-sudo unbound-manager
+unbound-manager
 # Select Option 16 - Uninstall Unbound Manager
 # Follow prompts to also remove Unbound DNS
 ```
@@ -136,18 +143,18 @@ sudo unbound-manager
 Or manually:
 ```bash
 # Stop services
-sudo systemctl stop unbound
-sudo systemctl disable unbound
+systemctl stop unbound
+systemctl disable unbound
 
 # Backup configuration (optional)
-sudo tar czf /root/unbound-backup-$(date +%Y%m%d).tar.gz /etc/unbound/
+tar czf /root/unbound-backup-$(date +%Y%m%d).tar.gz /etc/unbound/
 
 # Remove Unbound
-sudo rm -f /usr/sbin/unbound*
-sudo rm -rf /etc/unbound
+rm -f /usr/sbin/unbound*
+rm -rf /etc/unbound
 
 # Remove manager
-sudo pip3 uninstall unbound-manager
+pip3 uninstall unbound-manager
 rm -rf ~/unbound-manager
 ```
 
@@ -158,13 +165,13 @@ rm -rf ~/unbound-manager
 If Unbound fails to start after configuration changes:
 ```bash
 # Check configuration syntax
-sudo unbound-checkconf
+unbound-checkconf
 
 # View service status
-sudo systemctl status unbound
+systemctl status unbound
 
 # Check logs
-sudo journalctl -u unbound -n 50
+journalctl -u unbound -n 50
 ```
 
 ### DNS Resolution Problems
@@ -175,7 +182,7 @@ Test DNS resolution:
 dig @127.0.0.1 example.com
 
 # Check if port 53 is listening
-sudo netstat -tulpn | grep :53
+netstat -tulpn | grep :53
 ```
 
 ### Redis Connection Issues
@@ -183,18 +190,17 @@ sudo netstat -tulpn | grep :53
 Verify Redis integration:
 ```bash
 # Check Redis service
-sudo systemctl status redis-server
+systemctl status redis-server
 
 # Test Redis socket
-sudo redis-cli -s /var/run/redis/redis.sock ping
+redis-cli -s /var/run/redis/redis.sock ping
 ```
 
 ### Permission Errors
 
-The manager must run as root:
-```bash
-sudo unbound-manager
-```
+The manager requires root privileges. If you see permission errors:
+- Log in as root, or
+- Use `sudo unbound-manager`
 
 ## Performance Tuning
 
