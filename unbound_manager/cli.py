@@ -46,6 +46,25 @@ class UnboundManagerCLI:
         self.menu = InteractiveMenu()
         self.setup_menu()
     
+    def wrap_action(self, func: Callable) -> Callable:
+        """Wrap an action to ensure it pauses before returning."""
+        def wrapped():
+            try:
+                result = func()
+                # Always add pause for wrapped functions
+                console.print("\n[dim]Press Enter to continue...[/dim]")
+                input()
+                return result
+            except KeyboardInterrupt:
+                console.print("\n[yellow]Operation cancelled[/yellow]")
+                console.print("[dim]Press Enter to continue...[/dim]")
+                input()
+            except Exception as e:
+                console.print(f"\n[red]Error: {e}[/red]")
+                console.print("[dim]Press Enter to continue...[/dim]")
+                input()
+        return wrapped
+    
     def show_banner(self) -> None:
         """Display the application banner with status."""
         console.clear()
@@ -97,22 +116,22 @@ class UnboundManagerCLI:
         config_category = MenuCategory("Configuration", prefix="[C]")
         config_category.add_item(MenuItem(
             "Edit Configuration",
-            self.config_manager.manage_configuration,
+            self.wrap_action(self.config_manager.manage_configuration),
             description="Modify DNS settings"
         ))
         config_category.add_item(MenuItem(
             "Access Control",
-            self.config_manager.edit_access_control,
+            self.wrap_action(self.config_manager.edit_access_control),
             description="Manage allowed networks"
         ))
         config_category.add_item(MenuItem(
             "Redis Cache",
-            self.redis_manager.configure_redis,
+            self.wrap_action(self.redis_manager.configure_redis),
             description="Configure caching"
         ))
         config_category.add_item(MenuItem(
             "DNSSEC Settings",
-            self.dnssec_manager.manage_dnssec,
+            self.wrap_action(self.dnssec_manager.manage_dnssec),
             description="Security configuration"
         ))
         self.menu.add_category(config_category)
@@ -126,12 +145,12 @@ class UnboundManagerCLI:
         ))
         maintenance_category.add_item(MenuItem(
             "Restore Configuration",
-            self.backup_manager.restore_backup,
+            self.wrap_action(self.backup_manager.restore_backup),
             description="Restore from backup"
         ))
         maintenance_category.add_item(MenuItem(
             "Update Unbound",
-            self.installer.update_unbound,
+            self.wrap_action(self.installer.update_unbound),
             description="Update DNS server version"
         ))
         maintenance_category.add_item(MenuItem(
@@ -145,22 +164,22 @@ class UnboundManagerCLI:
         diagnostic_category = MenuCategory("Diagnostics", prefix="[D]")
         diagnostic_category.add_item(MenuItem(
             "Run Diagnostics",
-            self.troubleshooter.run_diagnostics,
+            self.wrap_action(self.troubleshooter.run_diagnostics),
             description="Check for issues"
         ))
         diagnostic_category.add_item(MenuItem(
             "Test DNS Resolution",
-            self.tester.run_all_tests,
+            self.wrap_action(self.tester.run_all_tests),
             description="Test DNS functionality"
         ))
         diagnostic_category.add_item(MenuItem(
             "Performance Benchmark",
-            lambda: self.tester.test_performance(100),
+            self.wrap_action(lambda: self.tester.test_performance(100)),
             description="Test query performance"
         ))
         diagnostic_category.add_item(MenuItem(
             "Network Connectivity",
-            self.troubleshooter.check_connectivity,
+            self.wrap_action(self.troubleshooter.check_connectivity),
             description="Check network status"
         ))
         self.menu.add_category(diagnostic_category)
@@ -174,7 +193,7 @@ class UnboundManagerCLI:
         ))
         advanced_category.add_item(MenuItem(
             "Regenerate Keys",
-            self.dnssec_manager.generate_control_keys,
+            self.wrap_action(self.dnssec_manager.generate_control_keys),
             description="Regenerate security keys"
         ))
         advanced_category.add_item(MenuItem(
