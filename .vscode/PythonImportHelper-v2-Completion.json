@@ -919,7 +919,7 @@
         "kind": 6,
         "importPath": "unbound_manager.config_manager",
         "description": "unbound_manager.config_manager",
-        "peekOfCode": "class ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment with multiple possible paths\n        possible_template_dirs = [\n            Path(__file__).parent.parent / \"data\" / \"templates\",  # Standard location\n            Path(__file__).parent.parent / \"templates\",  # Legacy location\n            Path(\"/usr/local/lib/python3.9/dist-packages/data/templates\"),  # Global install\n            Path(\"/usr/local/lib/python3.10/dist-packages/data/templates\"),  # Python 3.10",
+        "peekOfCode": "class ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        from jinja2 import FileSystemLoader, ChoiceLoader\n        import glob\n        # Setup Jinja2 environment with multiple possible paths\n        possible_template_dirs = [\n            Path(__file__).parent.parent / \"data\" / \"templates\",\n            Path(__file__).parent.parent / \"data\" / \"systemd\",",
         "detail": "unbound_manager.config_manager",
         "documentation": {}
     },
@@ -928,7 +928,7 @@
         "kind": 5,
         "importPath": "unbound_manager.config_manager",
         "description": "unbound_manager.config_manager",
-        "peekOfCode": "console = Console()\nclass ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment with multiple possible paths\n        possible_template_dirs = [\n            Path(__file__).parent.parent / \"data\" / \"templates\",  # Standard location\n            Path(__file__).parent.parent / \"templates\",  # Legacy location\n            Path(\"/usr/local/lib/python3.9/dist-packages/data/templates\"),  # Global install",
+        "peekOfCode": "console = Console()\nclass ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        from jinja2 import FileSystemLoader, ChoiceLoader\n        import glob\n        # Setup Jinja2 environment with multiple possible paths\n        possible_template_dirs = [\n            Path(__file__).parent.parent / \"data\" / \"templates\",",
         "detail": "unbound_manager.config_manager",
         "documentation": {}
     },
@@ -937,7 +937,7 @@
         "kind": 2,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "def get_app_version():\n    \"\"\"Get application version from VERSION file.\"\"\"\n    # Try multiple paths to find VERSION file\n    possible_paths = [\n        Path(__file__).parent.parent / \"VERSION\",  # Development\n        Path(\"/usr/local/lib/python3.9/dist-packages/unbound_manager\").parent / \"VERSION\",  # System install\n        Path(\"/usr/lib/python3/dist-packages/unbound_manager\").parent / \"VERSION\",  # Alt system\n        Path.home() / \"unbound-manager\" / \"VERSION\",  # User install\n    ]\n    for version_path in possible_paths:",
+        "peekOfCode": "def get_app_version():\n    \"\"\"Get application version from VERSION file.\"\"\"\n    import glob\n    # Try multiple paths to find VERSION file\n    possible_paths = [\n        Path(__file__).parent.parent / \"VERSION\",  # Development\n        Path.home() / \"unbound-manager\" / \"VERSION\",  # User install\n    ]\n    # Dynamically find Python site-packages directories\n    for base_path in [\"/usr/local/lib\", \"/usr/lib\"]:",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },

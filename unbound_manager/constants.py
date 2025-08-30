@@ -5,19 +5,27 @@ from pathlib import Path
 
 def get_app_version():
     """Get application version from VERSION file."""
+    import glob
+    
     # Try multiple paths to find VERSION file
     possible_paths = [
         Path(__file__).parent.parent / "VERSION",  # Development
-        Path("/usr/local/lib/python3.9/dist-packages/unbound_manager").parent / "VERSION",  # System install
-        Path("/usr/lib/python3/dist-packages/unbound_manager").parent / "VERSION",  # Alt system
         Path.home() / "unbound-manager" / "VERSION",  # User install
     ]
+    
+    # Dynamically find Python site-packages directories
+    for base_path in ["/usr/local/lib", "/usr/lib"]:
+        python_dirs = glob.glob(f"{base_path}/python3.*")
+        for python_dir in python_dirs:
+            possible_paths.extend([
+                Path(python_dir) / "dist-packages/unbound_manager" / "VERSION",
+                Path(python_dir) / "site-packages/unbound_manager" / "VERSION",
+            ])
     
     for version_path in possible_paths:
         if version_path.exists():
             return version_path.read_text().strip()
     
-    # If no VERSION file found, return unknown
     return "unknown"
 
 # Version

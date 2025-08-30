@@ -27,50 +27,72 @@ class ConfigManager:
     
     def __init__(self):
         """Initialize the configuration manager."""
+        from jinja2 import FileSystemLoader, ChoiceLoader
+        import glob
+        
         # Setup Jinja2 environment with multiple possible paths
         possible_template_dirs = [
-            Path(__file__).parent.parent / "data" / "templates",  # Standard location
-            Path(__file__).parent.parent / "templates",  # Legacy location
-            Path("/usr/local/lib/python3.9/dist-packages/data/templates"),  # Global install
-            Path("/usr/local/lib/python3.10/dist-packages/data/templates"),  # Python 3.10
-            Path("/usr/local/lib/python3.11/dist-packages/data/templates"),  # Python 3.11
-            Path("/usr/lib/python3/dist-packages/data/templates"),  # Alt global
-            Path.home() / "unbound-manager" / "data" / "templates",  # User install
+            Path(__file__).parent.parent / "data" / "templates",
+            Path(__file__).parent.parent / "data" / "systemd",
+            Path(__file__).parent.parent / "templates",
+            Path.home() / "unbound-manager" / "data" / "templates",
+            Path.home() / "unbound-manager" / "data" / "systemd",
+            Path.home() / "unbound-manager" / "templates",
         ]
         
-        # Find the first existing template directory
-        template_dir = None
+        # Dynamically find Python site-packages directories
+        for base_path in ["/usr/local/lib", "/usr/lib"]:
+            # Find all python3.* directories
+            python_dirs = glob.glob(f"{base_path}/python3.*")
+            for python_dir in python_dirs:
+                possible_template_dirs.extend([
+                    Path(python_dir) / "dist-packages" / "data" / "templates",
+                    Path(python_dir) / "dist-packages" / "data" / "systemd",
+                    Path(python_dir) / "site-packages" / "data" / "templates",
+                    Path(python_dir) / "site-packages" / "data" / "systemd",
+                ])
+        
+        # Also check system site-packages
+        import site
+        for site_dir in site.getsitepackages():
+            possible_template_dirs.extend([
+                Path(site_dir) / "data" / "templates",
+                Path(site_dir) / "data" / "systemd",
+            ])
+        
+        # Collect all existing directories
+        loaders = []
+        found_dirs = []
+        
         for path in possible_template_dirs:
             if path.exists():
-                template_dir = path
-                break
+                loaders.append(FileSystemLoader(str(path)))
+                found_dirs.append(str(path))
         
-        if not template_dir:
-            # Fallback: check if templates exist in package resources
+        # Try package resources as fallback
+        if not loaders:
             try:
                 import pkg_resources
-                if pkg_resources.resource_exists("unbound_manager", "../data/templates"):
-                    template_dir = Path(pkg_resources.resource_filename("unbound_manager", "../data/templates"))
+                for subdir in ["../data/templates", "../data/systemd", "../templates"]:
+                    if pkg_resources.resource_exists("unbound_manager", subdir):
+                        resource_path = Path(pkg_resources.resource_filename("unbound_manager", subdir))
+                        if resource_path.exists():
+                            loaders.append(FileSystemLoader(str(resource_path)))
+                            found_dirs.append(str(resource_path))
             except:
                 pass
         
-        if not template_dir:
-            # Last resort: check relative to this file
-            parent = Path(__file__).parent.parent
-            for possible in ["data/templates", "templates"]:
-                check_path = parent / possible
-                if check_path.exists():
-                    template_dir = check_path
-                    break
-        
-        if not template_dir:
+        if not loaders:
             raise FileNotFoundError(
-                "Template directory not found. Searched in:\n" + 
-                "\n".join(str(p) for p in possible_template_dirs)
+                f"Template directory not found. Searched {len(possible_template_dirs)} locations.\n"
+                "Checked paths include:\n" + 
+                "\n".join(str(p) for p in possible_template_dirs[:10]) +
+                "\n... and more"
             )
         
+        # Use ChoiceLoader to check multiple directories
         self.env = Environment(
-            loader=FileSystemLoader(str(template_dir)),
+            loader=ChoiceLoader(loaders),
             trim_blocks=True,
             lstrip_blocks=True,
         )
