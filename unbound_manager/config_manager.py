@@ -1,10 +1,10 @@
 """Configuration management for Unbound with editing capabilities."""
 
 import os
-import time
 import shutil
 import tempfile
 import subprocess
+import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 import yaml
@@ -27,10 +27,50 @@ class ConfigManager:
     
     def __init__(self):
         """Initialize the configuration manager."""
-        # Setup Jinja2 environment
-        template_dir = Path(__file__).parent.parent / "data" / "templates"
+        # Setup Jinja2 environment with multiple possible paths
+        possible_template_dirs = [
+            Path(__file__).parent.parent / "data" / "templates",  # Standard location
+            Path(__file__).parent.parent / "templates",  # Legacy location
+            Path("/usr/local/lib/python3.9/dist-packages/data/templates"),  # Global install
+            Path("/usr/local/lib/python3.10/dist-packages/data/templates"),  # Python 3.10
+            Path("/usr/local/lib/python3.11/dist-packages/data/templates"),  # Python 3.11
+            Path("/usr/lib/python3/dist-packages/data/templates"),  # Alt global
+            Path.home() / "unbound-manager" / "data" / "templates",  # User install
+        ]
+        
+        # Find the first existing template directory
+        template_dir = None
+        for path in possible_template_dirs:
+            if path.exists():
+                template_dir = path
+                break
+        
+        if not template_dir:
+            # Fallback: check if templates exist in package resources
+            try:
+                import pkg_resources
+                if pkg_resources.resource_exists("unbound_manager", "../data/templates"):
+                    template_dir = Path(pkg_resources.resource_filename("unbound_manager", "../data/templates"))
+            except:
+                pass
+        
+        if not template_dir:
+            # Last resort: check relative to this file
+            parent = Path(__file__).parent.parent
+            for possible in ["data/templates", "templates"]:
+                check_path = parent / possible
+                if check_path.exists():
+                    template_dir = check_path
+                    break
+        
+        if not template_dir:
+            raise FileNotFoundError(
+                "Template directory not found. Searched in:\n" + 
+                "\n".join(str(p) for p in possible_template_dirs)
+            )
+        
         self.env = Environment(
-            loader=FileSystemLoader(template_dir),
+            loader=FileSystemLoader(str(template_dir)),
             trim_blocks=True,
             lstrip_blocks=True,
         )
@@ -261,7 +301,6 @@ class ConfigManager:
     def open_in_editor(self, file_path: Path, editor: str = "nano") -> None:
         """Open configuration file in external editor."""
         # Create backup before editing
-        import time
         backup_path = file_path.with_suffix(f'.conf.backup.{int(time.time())}')
         shutil.copy2(file_path, backup_path)
         console.print(f"[green]✓[/green] Backup created: {backup_path.name}")

@@ -919,7 +919,7 @@
         "kind": 6,
         "importPath": "unbound_manager.config_manager",
         "description": "unbound_manager.config_manager",
-        "peekOfCode": "class ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment\n        template_dir = Path(__file__).parent.parent / \"data\" / \"templates\"\n        self.env = Environment(\n            loader=FileSystemLoader(template_dir),\n            trim_blocks=True,\n            lstrip_blocks=True,",
+        "peekOfCode": "class ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment with multiple possible paths\n        possible_template_dirs = [\n            Path(__file__).parent.parent / \"data\" / \"templates\",  # Standard location\n            Path(__file__).parent.parent / \"templates\",  # Legacy location\n            Path(\"/usr/local/lib/python3.9/dist-packages/data/templates\"),  # Global install\n            Path(\"/usr/local/lib/python3.10/dist-packages/data/templates\"),  # Python 3.10",
         "detail": "unbound_manager.config_manager",
         "documentation": {}
     },
@@ -928,7 +928,7 @@
         "kind": 5,
         "importPath": "unbound_manager.config_manager",
         "description": "unbound_manager.config_manager",
-        "peekOfCode": "console = Console()\nclass ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment\n        template_dir = Path(__file__).parent.parent / \"data\" / \"templates\"\n        self.env = Environment(\n            loader=FileSystemLoader(template_dir),\n            trim_blocks=True,",
+        "peekOfCode": "console = Console()\nclass ConfigManager:\n    \"\"\"Manage Unbound configuration files with editing capabilities.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the configuration manager.\"\"\"\n        # Setup Jinja2 environment with multiple possible paths\n        possible_template_dirs = [\n            Path(__file__).parent.parent / \"data\" / \"templates\",  # Standard location\n            Path(__file__).parent.parent / \"templates\",  # Legacy location\n            Path(\"/usr/local/lib/python3.9/dist-packages/data/templates\"),  # Global install",
         "detail": "unbound_manager.config_manager",
         "documentation": {}
     },
@@ -1387,7 +1387,7 @@
         "kind": 5,
         "importPath": "setup",
         "description": "setup",
-        "peekOfCode": "readme_file = Path(__file__).parent / \"README.md\"\nlong_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\n# Read requirements\nrequirements_file = Path(__file__).parent / \"requirements.txt\"\nif requirements_file.exists():\n    with open(requirements_file, \"r\", encoding=\"utf-8\") as fh:\n        requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nelse:\n    requirements = []\nsetup(",
+        "peekOfCode": "readme_file = Path(__file__).parent / \"README.md\"\nlong_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\n# Read requirements\nrequirements_file = Path(__file__).parent / \"requirements.txt\"\nif requirements_file.exists():\n    with open(requirements_file, \"r\", encoding=\"utf-8\") as fh:\n        requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nelse:\n    requirements = []\n# Collect data files for installation",
         "detail": "setup",
         "documentation": {}
     },
@@ -1396,7 +1396,7 @@
         "kind": 5,
         "importPath": "setup",
         "description": "setup",
-        "peekOfCode": "long_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\n# Read requirements\nrequirements_file = Path(__file__).parent / \"requirements.txt\"\nif requirements_file.exists():\n    with open(requirements_file, \"r\", encoding=\"utf-8\") as fh:\n        requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nelse:\n    requirements = []\nsetup(\n    name=\"unbound-manager\",",
+        "peekOfCode": "long_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\n# Read requirements\nrequirements_file = Path(__file__).parent / \"requirements.txt\"\nif requirements_file.exists():\n    with open(requirements_file, \"r\", encoding=\"utf-8\") as fh:\n        requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nelse:\n    requirements = []\n# Collect data files for installation\ndata_files = []",
         "detail": "setup",
         "documentation": {}
     },
@@ -1405,7 +1405,16 @@
         "kind": 5,
         "importPath": "setup",
         "description": "setup",
-        "peekOfCode": "requirements_file = Path(__file__).parent / \"requirements.txt\"\nif requirements_file.exists():\n    with open(requirements_file, \"r\", encoding=\"utf-8\") as fh:\n        requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nelse:\n    requirements = []\nsetup(\n    name=\"unbound-manager\",\n    version=version,\n    author=\"Regix\",",
+        "peekOfCode": "requirements_file = Path(__file__).parent / \"requirements.txt\"\nif requirements_file.exists():\n    with open(requirements_file, \"r\", encoding=\"utf-8\") as fh:\n        requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nelse:\n    requirements = []\n# Collect data files for installation\ndata_files = []\nfor root, dirs, files in os.walk(\"data\"):\n    if files:",
+        "detail": "setup",
+        "documentation": {}
+    },
+    {
+        "label": "data_files",
+        "kind": 5,
+        "importPath": "setup",
+        "description": "setup",
+        "peekOfCode": "data_files = []\nfor root, dirs, files in os.walk(\"data\"):\n    if files:\n        # Convert path for installation\n        install_dir = root\n        file_list = [os.path.join(root, f) for f in files]\n        data_files.append((install_dir, file_list))\n# Add scripts to data_files\nif os.path.exists(\"scripts\"):\n    script_files = []",
         "detail": "setup",
         "documentation": {}
     }

@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 from pathlib import Path
+import os
 
 # Read version from VERSION file
 version_file = Path(__file__).parent / "VERSION"
@@ -19,6 +20,24 @@ if requirements_file.exists():
 else:
     requirements = []
 
+# Collect data files for installation
+data_files = []
+for root, dirs, files in os.walk("data"):
+    if files:
+        # Convert path for installation
+        install_dir = root
+        file_list = [os.path.join(root, f) for f in files]
+        data_files.append((install_dir, file_list))
+
+# Add scripts to data_files
+if os.path.exists("scripts"):
+    script_files = []
+    for f in os.listdir("scripts"):
+        if os.path.isfile(os.path.join("scripts", f)):
+            script_files.append(os.path.join("scripts", f))
+    if script_files:
+        data_files.append(("scripts", script_files))
+
 setup(
     name="unbound-manager",
     version=version,
@@ -36,13 +55,18 @@ setup(
         ],
     },
     include_package_data=True,
-    scripts=[
-        "scripts/install.sh",
-        "scripts/uninstall.sh", 
-        "scripts/update.sh",
-    ],
+    package_data={
+        "": ["VERSION", "*.yaml", "*.j2", "*.sh", "*.py"],
+        "unbound_manager": ["../data/**/*"],
+    },
+    data_files=data_files,
     classifiers=[
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "License :: OSI Approved :: MIT License",
         "Operating System :: POSIX :: Linux",
         "Environment :: Console",
