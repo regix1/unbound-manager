@@ -345,78 +345,90 @@ class UnboundManagerCLI:
         try:
             project_dir = Path(__file__).parent.parent
             
-            # Create backup first
-            console.print("[cyan]Creating backup before update...[/cyan]")
+            # Check if git repository exists
+            if not (project_dir / ".git").exists():
+                console.print("[red]Not a git repository.[/red]")
+                console.print("[yellow]For automatic updates, reinstall from GitHub:[/yellow]")
+                console.print("  cd ~")
+                console.print("  mv unbound-manager unbound-manager.old")
+                console.print("  git clone https://github.com/regix1/unbound-manager.git")
+                console.print("  cd unbound-manager")
+                console.print("  pip3 install -e .")
+                return
             
-            import time
-            timestamp = int(time.time())
-            backup_dir = project_dir.parent / f"unbound-manager.backup.{timestamp}"
+            # Simple approach - just fetch and reset to origin
+            console.print("[cyan]Fetching latest version...[/cyan]")
             
-            # Stash any local changes
-            console.print("[cyan]Stashing local changes...[/cyan]")
+            # Add origin if it doesn't exist
             run_command(
-                ["git", "stash"],
+                ["git", "remote", "add", "origin", "https://github.com/regix1/unbound-manager.git"],
                 cwd=project_dir,
                 check=False
             )
             
-            # Pull latest changes
-            console.print("[cyan]Pulling latest changes from GitHub...[/cyan]")
+            # Fetch latest
             result = run_command(
-                ["git", "pull", "origin", "main"],
+                ["git", "fetch", "origin"],
                 cwd=project_dir,
                 check=False
             )
             
             if result.returncode != 0:
-                # Try master branch if main doesn't exist
+                console.print("[red]Could not fetch updates. Check your internet connection.[/red]")
+                return
+            
+            # Check for changes
+            result = run_command(
+                ["git", "rev-list", "HEAD...origin/main", "--count"],
+                cwd=project_dir,
+                check=False
+            )
+            
+            if result.returncode != 0:
+                # Try master branch
                 result = run_command(
-                    ["git", "pull", "origin", "master"],
+                    ["git", "rev-list", "HEAD...origin/master", "--count"],
                     cwd=project_dir,
                     check=False
                 )
+                branch = "master"
+            else:
+                branch = "main"
+            
+            # Save any local modifications
+            console.print("[cyan]Saving local modifications...[/cyan]")
+            run_command(["git", "stash"], cwd=project_dir, check=False)
+            
+            # Reset to origin
+            console.print(f"[cyan]Updating to latest version from {branch}...[/cyan]")
+            result = run_command(
+                ["git", "reset", "--hard", f"origin/{branch}"],
+                cwd=project_dir,
+                check=False
+            )
+            
+            if result.returncode != 0:
+                console.print("[red]Update failed. Manual intervention required.[/red]")
+                return
+            
+            console.print("[green]✓ Code updated successfully[/green]")
+            
+            # Reinstall package
+            console.print("[cyan]Reinstalling Python package...[/cyan]")
+            result = run_command(
+                ["pip3", "install", "-e", "."],
+                cwd=project_dir,
+                check=False
+            )
             
             if result.returncode == 0:
-                console.print("[green]✓ Code updated successfully[/green]")
-                
-                # Reinstall pip package
-                console.print("[cyan]Updating Python package...[/cyan]")
-                result = run_command(
-                    ["pip3", "install", "-e", "."],
-                    cwd=project_dir,
-                    check=False
-                )
-                
-                if result.returncode == 0:
-                    console.print("[green]✓ Python package updated[/green]")
-                    
-                    # Update VERSION file if needed
-                    version_file = project_dir / "VERSION"
-                    if not version_file.exists():
-                        version_file.write_text(APP_VERSION)
-                    
-                    console.print("\n[green]✓ Update completed successfully![/green]")
-                    console.print("[yellow]Please restart unbound-manager to use the new version[/yellow]")
-                    
-                    # Ask to restart
-                    if prompt_yes_no("Restart now?"):
-                        console.print("[cyan]Restarting...[/cyan]")
-                        import os
-                        import sys
-                        os.execv(sys.executable, [sys.executable] + sys.argv)
-                else:
-                    console.print("[yellow]Warning: Could not update Python package[/yellow]")
-                    console.print("[cyan]Try manually: pip3 install -e ~/unbound-manager[/cyan]")
+                console.print("[green]✓ Update complete![/green]")
+                console.print("[yellow]Restart unbound-manager to use the new version[/yellow]")
             else:
-                console.print("[red]Update failed. Please check the error messages above.[/red]")
-                console.print("[cyan]You can try updating manually:[/cyan]")
-                console.print("  cd ~/unbound-manager")
-                console.print("  git pull")
-                console.print("  pip3 install -e .")
+                console.print("[yellow]Could not reinstall package. Try: pip3 install -e ~/unbound-manager[/yellow]")
                 
         except Exception as e:
-            console.print(f"[red]Error during update: {e}[/red]")
-            console.print("[yellow]Please update manually using the instructions above[/yellow]")
+            console.print(f"[red]Update error: {e}[/red]")
     
     def handle_choice(self, choice: str) -> bool:
         """
