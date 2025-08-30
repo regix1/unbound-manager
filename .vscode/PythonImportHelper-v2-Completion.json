@@ -1007,7 +1007,7 @@
         "kind": 2,
         "importPath": "unbound_manager.cli",
         "description": "unbound_manager.cli",
-        "peekOfCode": "def main():\n    \"\"\"Main entry point for the application.\"\"\"\n    try:\n        cli = UnboundManagerCLI()\n        cli.run()\n        return 0\n    except KeyboardInterrupt:\n        console.print(\"\\n[yellow]Application terminated by user[/yellow]\")\n        return 1\n    except Exception as e:",
+        "peekOfCode": "def main():\n    \"\"\"Main entry point for the application.\"\"\"\n    try:\n        cli = UnboundManagerCLI()\n        cli.run()\n        return 0\n    except KeyboardInterrupt:\n        console.print(\"\\n[yellow]Interrupted[/yellow]\")\n        return 1\n    except Exception as e:",
         "detail": "unbound_manager.cli",
         "documentation": {}
     },
@@ -1268,7 +1268,7 @@
         "kind": 6,
         "importPath": "unbound_manager.menu_system",
         "description": "unbound_manager.menu_system",
-        "peekOfCode": "class MenuItem:\n    \"\"\"Represents a single menu item.\"\"\"\n    name: str\n    action: Callable\n    icon: str = \"•\"\n    description: str = \"\"\n    key: Optional[str] = None\n    style: str = \"cyan\"\n@dataclass\nclass MenuCategory:",
+        "peekOfCode": "class MenuItem:\n    \"\"\"Represents a single menu item.\"\"\"\n    name: str\n    action: Callable\n    prefix: str = \"\"\n    description: str = \"\"\n    key: Optional[str] = None\n    style: str = \"cyan\"\n@dataclass\nclass MenuCategory:",
         "detail": "unbound_manager.menu_system",
         "documentation": {}
     },
@@ -1277,7 +1277,7 @@
         "kind": 6,
         "importPath": "unbound_manager.menu_system",
         "description": "unbound_manager.menu_system",
-        "peekOfCode": "class MenuCategory:\n    \"\"\"Represents a category of menu items.\"\"\"\n    name: str\n    items: List[MenuItem] = None\n    icon: str = \"📁\"\n    expanded: bool = False\n    def __post_init__(self):\n        if self.items is None:\n            self.items = []\n    def add_item(self, item: MenuItem) -> None:",
+        "peekOfCode": "class MenuCategory:\n    \"\"\"Represents a category of menu items.\"\"\"\n    name: str\n    items: List[MenuItem] = None\n    prefix: str = \"\"\n    expanded: bool = False\n    def __post_init__(self):\n        if self.items is None:\n            self.items = []\n    def add_item(self, item: MenuItem) -> None:",
         "detail": "unbound_manager.menu_system",
         "documentation": {}
     },
@@ -1286,7 +1286,7 @@
         "kind": 6,
         "importPath": "unbound_manager.menu_system",
         "description": "unbound_manager.menu_system",
-        "peekOfCode": "class InteractiveMenu:\n    \"\"\"Interactive arrow-key driven menu system.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the interactive menu.\"\"\"\n        self.items: List[Any] = []  # Can be MenuItem or MenuCategory\n        self.current_index = 0\n        self.in_category = False\n        self.category_index = 0\n        self.search_mode = False\n        self.search_query = \"\"",
+        "peekOfCode": "class InteractiveMenu:\n    \"\"\"Interactive arrow-key driven menu system.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the interactive menu.\"\"\"\n        self.items: List[Any] = []  # Can be MenuItem or MenuCategory\n        self.current_index = 0\n        self.in_category = False\n        self.category_index = 0\n    def add_item(self, item: MenuItem) -> None:\n        \"\"\"Add a top-level menu item.\"\"\"",
         "detail": "unbound_manager.menu_system",
         "documentation": {}
     },
@@ -1304,7 +1304,7 @@
         "kind": 5,
         "importPath": "unbound_manager.menu_system",
         "description": "unbound_manager.menu_system",
-        "peekOfCode": "console = Console()\n@dataclass\nclass MenuItem:\n    \"\"\"Represents a single menu item.\"\"\"\n    name: str\n    action: Callable\n    icon: str = \"•\"\n    description: str = \"\"\n    key: Optional[str] = None\n    style: str = \"cyan\"",
+        "peekOfCode": "console = Console()\n@dataclass\nclass MenuItem:\n    \"\"\"Represents a single menu item.\"\"\"\n    name: str\n    action: Callable\n    prefix: str = \"\"\n    description: str = \"\"\n    key: Optional[str] = None\n    style: str = \"cyan\"",
         "detail": "unbound_manager.menu_system",
         "documentation": {}
     },

@@ -54,53 +54,47 @@ class UnboundManagerCLI:
         unbound_status = check_service_status("unbound")
         redis_status = check_service_status("redis-server")
         
-        # Build status line
-        if unbound_status and redis_status:
-            status_color = "green"
-            status_text = "All Services Running"
-        elif unbound_status:
-            status_color = "yellow"
-            status_text = "Unbound Running | Redis Stopped"
-        elif redis_status:
-            status_color = "yellow"
-            status_text = "Unbound Stopped | Redis Running"
-        else:
-            status_color = "red"
-            status_text = "All Services Stopped"
+        # Build status indicators
+        unbound_indicator = "[green]●[/green]" if unbound_status else "[red]○[/red]"
+        redis_indicator = "[green]●[/green]" if redis_status else "[red]○[/red]"
         
-        # Simple, clean banner
-        console.print()
-        console.print(f"[bold cyan]UNBOUND DNS MANAGER[/bold cyan] [dim]v{APP_VERSION}[/dim]")
-        console.print("━" * 40, style="dim")
-        console.print(f"[{status_color}]● {status_text}[/{status_color}]")
+        # Display header
+        console.print("┌" + "─" * 58 + "┐")
+        console.print(f"│  [bold cyan]UNBOUND DNS MANAGER[/bold cyan]  v{APP_VERSION:<30} │")
+        console.print("├" + "─" * 58 + "┤")
+        console.print(f"│  Status: Unbound {unbound_indicator}  Redis {redis_indicator}                             │")
+        console.print("└" + "─" * 58 + "┘")
         console.print()
     
     def setup_menu(self) -> None:
         """Setup the interactive menu structure."""
-        # Quick Actions (most common tasks)
+        # Service Control (most important)
         self.menu.add_item(MenuItem(
-            "Start/Stop Services",
+            "Service Control",
             self.manage_services_quick,
-            icon="⚡",
-            description="Quick service control"
+            prefix="[S]",
+            description="Start/Stop DNS services",
+            key="s"
         ))
         
         self.menu.add_item(MenuItem(
-            "View Status",
+            "System Status",
             self.show_detailed_status,
-            icon="📊",
-            description="System status and statistics"
+            prefix="[T]",
+            description="View status and statistics",
+            key="t"
         ))
         
         self.menu.add_item(MenuItem(
             "View Logs",
             lambda: self.view_logs_interactive(),
-            icon="📜",
-            description="View recent logs"
+            prefix="[L]",
+            description="View system logs",
+            key="l"
         ))
         
         # Configuration category
-        config_category = MenuCategory("Configuration", icon="⚙️")
+        config_category = MenuCategory("Configuration", prefix="[C]")
         config_category.add_item(MenuItem(
             "Edit Configuration",
             self.config_manager.manage_configuration,
@@ -112,23 +106,23 @@ class UnboundManagerCLI:
             description="Manage allowed networks"
         ))
         config_category.add_item(MenuItem(
-            "Redis Settings",
+            "Redis Cache",
             self.redis_manager.configure_redis,
             description="Configure caching"
         ))
         config_category.add_item(MenuItem(
-            "DNSSEC",
+            "DNSSEC Settings",
             self.dnssec_manager.manage_dnssec,
-            description="DNSSEC configuration"
+            description="Security configuration"
         ))
         self.menu.add_category(config_category)
         
         # Maintenance category
-        maintenance_category = MenuCategory("Maintenance", icon="🔧")
+        maintenance_category = MenuCategory("Maintenance", prefix="[M]")
         maintenance_category.add_item(MenuItem(
             "Backup Configuration",
             self.backup_configuration_interactive,
-            description="Create backup"
+            description="Create configuration backup"
         ))
         maintenance_category.add_item(MenuItem(
             "Restore Configuration",
@@ -138,45 +132,55 @@ class UnboundManagerCLI:
         maintenance_category.add_item(MenuItem(
             "Update Unbound",
             self.installer.update_unbound,
-            description="Update DNS server"
+            description="Update DNS server version"
+        ))
+        maintenance_category.add_item(MenuItem(
+            "Clean Backups",
+            self.cleanup_backups,
+            description="Remove old backups"
         ))
         self.menu.add_category(maintenance_category)
         
-        # Troubleshooting category
-        troubleshoot_category = MenuCategory("Troubleshooting", icon="🔍")
-        troubleshoot_category.add_item(MenuItem(
+        # Diagnostics category
+        diagnostic_category = MenuCategory("Diagnostics", prefix="[D]")
+        diagnostic_category.add_item(MenuItem(
             "Run Diagnostics",
             self.troubleshooter.run_diagnostics,
             description="Check for issues"
         ))
-        troubleshoot_category.add_item(MenuItem(
-            "Test DNS",
+        diagnostic_category.add_item(MenuItem(
+            "Test DNS Resolution",
             self.tester.run_all_tests,
-            description="Test functionality"
+            description="Test DNS functionality"
         ))
-        troubleshoot_category.add_item(MenuItem(
-            "Performance Test",
+        diagnostic_category.add_item(MenuItem(
+            "Performance Benchmark",
             lambda: self.tester.test_performance(100),
-            description="Benchmark DNS"
+            description="Test query performance"
         ))
-        self.menu.add_category(troubleshoot_category)
+        diagnostic_category.add_item(MenuItem(
+            "Network Connectivity",
+            self.troubleshooter.check_connectivity,
+            description="Check network status"
+        ))
+        self.menu.add_category(diagnostic_category)
         
-        # Advanced category (less common tasks)
-        advanced_category = MenuCategory("Advanced", icon="🚀")
+        # Advanced category
+        advanced_category = MenuCategory("Advanced Options", prefix="[A]")
         advanced_category.add_item(MenuItem(
-            "Install/Reinstall",
+            "Installation Manager",
             self.installation_menu,
-            description="Installation options"
+            description="Install/Reinstall Unbound"
         ))
         advanced_category.add_item(MenuItem(
             "Regenerate Keys",
             self.dnssec_manager.generate_control_keys,
-            description="Regenerate control keys"
+            description="Regenerate security keys"
         ))
         advanced_category.add_item(MenuItem(
-            "Update Manager",
+            "Update This Tool",
             self.update_manager,
-            description="Update this tool"
+            description="Update Unbound Manager"
         ))
         advanced_category.add_item(MenuItem(
             "Uninstall Manager",
@@ -186,19 +190,19 @@ class UnboundManagerCLI:
         ))
         self.menu.add_category(advanced_category)
         
-        # Add help and exit
+        # Help and Exit
         self.menu.add_item(MenuItem(
             "Help",
             self.show_help,
-            icon="❓",
-            description="Show help",
+            prefix="[H]",
+            description="Show help information",
             key="h"
         ))
         
         self.menu.add_item(MenuItem(
             "Exit",
             lambda: False,
-            icon="🚪",
+            prefix="[Q]",
             description="Exit program",
             key="q",
             style="red"
@@ -207,48 +211,56 @@ class UnboundManagerCLI:
     def show_detailed_status(self) -> None:
         """Show detailed system status."""
         console.clear()
-        console.print(Panel.fit(
-            "[bold cyan]System Status[/bold cyan]",
-            border_style="cyan"
-        ))
         
-        # Service status
-        table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("Service", style="cyan")
-        table.add_column("Status", justify="center")
-        table.add_column("Details")
+        # Header
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│                    [bold cyan]SYSTEM STATUS[/bold cyan]                        │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
+        
+        # Service status table
+        table = Table(show_header=True, header_style="bold cyan", box=None, padding=(0, 1))
+        table.add_column("Service", style="cyan", width=20)
+        table.add_column("Status", justify="center", width=12)
+        table.add_column("Details", width=26)
         
         # Unbound status
         unbound_status = check_service_status("unbound")
         if unbound_status:
-            unbound_display = "[green]● Running[/green]"
+            unbound_display = "[green]● Active[/green]"
             unbound_details = self._get_service_uptime("unbound")
         else:
-            unbound_display = "[red]○ Stopped[/red]"
+            unbound_display = "[red]○ Inactive[/red]"
             unbound_details = "Service not running"
         table.add_row("Unbound DNS", unbound_display, unbound_details)
         
         # Redis status
         redis_status = check_service_status("redis-server")
         if redis_status:
-            redis_display = "[green]● Running[/green]"
+            redis_display = "[green]● Active[/green]"
             redis_details = self._get_service_uptime("redis-server")
         else:
-            redis_display = "[red]○ Stopped[/red]"
+            redis_display = "[red]○ Inactive[/red]"
             redis_details = "Service not running"
         table.add_row("Redis Cache", redis_display, redis_details)
         
         console.print(table)
+        console.print()
         
         # Show statistics if services are running
         if unbound_status:
-            console.print("\n[cyan]DNS Statistics:[/cyan]")
+            console.print("─" * 60)
+            console.print("[bold]DNS Statistics:[/bold]")
             self._show_quick_stats()
+            console.print()
         
         if redis_status:
-            console.print("\n[cyan]Cache Statistics:[/cyan]")
+            console.print("─" * 60)
+            console.print("[bold]Cache Statistics:[/bold]")
             self._show_cache_stats()
+            console.print()
         
+        console.print("─" * 60)
         console.print("\n[dim]Press Enter to continue...[/dim]")
         input()
     
@@ -262,7 +274,6 @@ class UnboundManagerCLI:
             if result.returncode == 0 and "=" in result.stdout:
                 timestamp = result.stdout.split("=")[1].strip()
                 if timestamp:
-                    # Parse and calculate uptime
                     import datetime
                     start_time = datetime.datetime.strptime(
                         timestamp.split()[1] + " " + timestamp.split()[2],
@@ -297,14 +308,13 @@ class UnboundManagerCLI:
                 queries = stats.get("total.num.queries", "0")
                 cache_hits = stats.get("total.num.cachehits", "0")
                 
-                # Calculate hit rate
                 if int(queries) > 0:
                     hit_rate = (int(cache_hits) / int(queries)) * 100
-                    console.print(f"  Total queries: {queries}")
-                    console.print(f"  Cache hits: {cache_hits}")
-                    console.print(f"  Hit rate: [green]{hit_rate:.1f}%[/green]")
+                    console.print(f"  Total queries     : {queries}")
+                    console.print(f"  Cache hits        : {cache_hits}")
+                    console.print(f"  Hit rate          : [green]{hit_rate:.1f}%[/green]")
                 else:
-                    console.print("  No queries yet")
+                    console.print("  No queries processed yet")
         except Exception:
             console.print("  [yellow]Statistics unavailable[/yellow]")
     
@@ -316,53 +326,69 @@ class UnboundManagerCLI:
                 check=False
             )
             if result.returncode == 0:
+                hits = misses = 0
                 for line in result.stdout.split('\n'):
                     if 'keyspace_hits:' in line:
-                        hits = line.split(':')[1].strip()
-                        console.print(f"  Keyspace hits: {hits}")
+                        hits = int(line.split(':')[1].strip())
                     elif 'keyspace_misses:' in line:
-                        misses = line.split(':')[1].strip()
-                        console.print(f"  Keyspace misses: {misses}")
+                        misses = int(line.split(':')[1].strip())
+                
+                if hits + misses > 0:
+                    rate = (hits / (hits + misses)) * 100
+                    console.print(f"  Keyspace hits     : {hits}")
+                    console.print(f"  Keyspace misses   : {misses}")
+                    console.print(f"  Cache efficiency  : [green]{rate:.1f}%[/green]")
+                else:
+                    console.print("  No cache activity yet")
         except Exception:
             console.print("  [yellow]Cache statistics unavailable[/yellow]")
     
     def manage_services_quick(self) -> None:
         """Quick service management."""
         console.clear()
-        console.print(Panel.fit(
-            "[bold cyan]Service Management[/bold cyan]",
-            border_style="cyan"
-        ))
+        
+        # Header
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│                  [bold cyan]SERVICE CONTROL[/bold cyan]                       │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
         
         # Show current status
         unbound_running = check_service_status("unbound")
         redis_running = check_service_status("redis-server")
         
-        console.print("Current Status:")
-        console.print(f"  Unbound: {'[green]Running[/green]' if unbound_running else '[red]Stopped[/red]'}")
-        console.print(f"  Redis: {'[green]Running[/green]' if redis_running else '[red]Stopped[/red]'}")
+        console.print("[bold]Current Status:[/bold]")
+        console.print(f"  Unbound : {'[green]● Running[/green]' if unbound_running else '[red]○ Stopped[/red]'}")
+        console.print(f"  Redis   : {'[green]● Running[/green]' if redis_running else '[red]○ Stopped[/red]'}")
+        console.print()
+        console.print("─" * 60)
         console.print()
         
-        # Quick actions based on status
+        # Quick actions
         if not unbound_running:
-            console.print("[green]1[/green]. Start All Services")
+            console.print("  [1] Start All Services")
         else:
-            console.print("[green]1[/green]. Restart All Services")
+            console.print("  [1] Restart All Services")
         
-        console.print("[green]2[/green]. Stop All Services")
-        console.print("[green]3[/green]. Advanced Service Control")
-        console.print("[green]0[/green]. Back")
+        console.print("  [2] Stop All Services")
+        console.print("  [3] Advanced Service Control")
+        console.print("  [0] Back to Main Menu")
+        console.print()
         
         choice = Prompt.ask("Select action", choices=["0", "1", "2", "3"], default="0")
         
         if choice == "1":
-            console.print("[cyan]Starting services...[/cyan]")
-            restart_service("redis-server")
-            restart_service("unbound")
+            console.print("\n[cyan]Starting services...[/cyan]")
+            with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+                task = progress.add_task("Starting Redis...", total=None)
+                restart_service("redis-server")
+                progress.update(task, description="Starting Unbound...")
+                restart_service("unbound")
+                progress.update(task, completed=True)
             console.print("[green]✓[/green] Services started")
             time.sleep(2)
         elif choice == "2":
-            console.print("[cyan]Stopping services...[/cyan]")
+            console.print("\n[cyan]Stopping services...[/cyan]")
             run_command(["systemctl", "stop", "unbound"])
             run_command(["systemctl", "stop", "redis-server"])
             console.print("[yellow]Services stopped[/yellow]")
@@ -372,51 +398,57 @@ class UnboundManagerCLI:
     
     def manage_services_advanced(self) -> None:
         """Advanced service management."""
-        from .utils import restart_service
-        
         console.clear()
-        console.print(Panel.fit(
-            "[bold]Advanced Service Control[/bold]",
-            border_style="cyan"
-        ))
         
-        console.print("[green]1[/green]. Start Unbound")
-        console.print("[green]2[/green]. Stop Unbound")
-        console.print("[green]3[/green]. Restart Unbound")
-        console.print("[green]4[/green]. Start Redis")
-        console.print("[green]5[/green]. Stop Redis")
-        console.print("[green]6[/green]. Restart Redis")
-        console.print("[green]0[/green]. Back")
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│              [bold cyan]ADVANCED SERVICE CONTROL[/bold cyan]                  │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
+        
+        console.print("  [1] Start Unbound")
+        console.print("  [2] Stop Unbound")
+        console.print("  [3] Restart Unbound")
+        console.print("  [4] Start Redis")
+        console.print("  [5] Stop Redis")
+        console.print("  [6] Restart Redis")
+        console.print("  [0] Back")
+        console.print()
         
         choice = Prompt.ask("Select action", choices=["0", "1", "2", "3", "4", "5", "6"])
         
+        from .utils import restart_service
+        
         actions = {
-            "1": lambda: restart_service("unbound"),
-            "2": lambda: run_command(["systemctl", "stop", "unbound"]),
-            "3": lambda: restart_service("unbound"),
-            "4": lambda: restart_service("redis-server"),
-            "5": lambda: run_command(["systemctl", "stop", "redis-server"]),
-            "6": lambda: restart_service("redis-server"),
+            "1": ("Starting Unbound...", lambda: restart_service("unbound")),
+            "2": ("Stopping Unbound...", lambda: run_command(["systemctl", "stop", "unbound"])),
+            "3": ("Restarting Unbound...", lambda: restart_service("unbound")),
+            "4": ("Starting Redis...", lambda: restart_service("redis-server")),
+            "5": ("Stopping Redis...", lambda: run_command(["systemctl", "stop", "redis-server"])),
+            "6": ("Restarting Redis...", lambda: restart_service("redis-server")),
         }
         
         if choice != "0":
-            actions[choice]()
+            msg, action = actions[choice]
+            console.print(f"\n[cyan]{msg}[/cyan]")
+            action()
             console.print("[green]✓[/green] Action completed")
             time.sleep(2)
     
     def backup_configuration_interactive(self) -> None:
         """Interactive backup creation."""
         console.clear()
-        console.print(Panel.fit(
-            "[bold cyan]Create Backup[/bold cyan]",
-            border_style="cyan"
-        ))
+        
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│                 [bold cyan]CREATE BACKUP[/bold cyan]                         │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
         
         description = Prompt.ask(
-            "[cyan]Enter backup description (optional)[/cyan]",
+            "Enter backup description (optional)",
             default=""
         )
         
+        console.print()
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -430,19 +462,42 @@ class UnboundManagerCLI:
         console.print("\n[dim]Press Enter to continue...[/dim]")
         input()
     
+    def cleanup_backups(self) -> None:
+        """Clean up old backups."""
+        console.clear()
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│                 [bold cyan]CLEANUP BACKUPS[/bold cyan]                       │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
+        
+        backups = self.backup_manager.list_backups()
+        console.print(f"Found {len(backups)} backup(s)")
+        
+        if len(backups) > 10:
+            console.print(f"\n[yellow]You have {len(backups)} backups. Recommended to keep only 10.[/yellow]")
+            if prompt_yes_no("Clean up old backups?", default=True):
+                self.backup_manager.cleanup_old_backups(10)
+        else:
+            console.print("\n[green]No cleanup needed[/green]")
+        
+        console.print("\n[dim]Press Enter to continue...[/dim]")
+        input()
+    
     def view_logs_interactive(self) -> None:
         """Interactive log viewer."""
         console.clear()
-        console.print(Panel.fit(
-            "[bold cyan]View Logs[/bold cyan]",
-            border_style="cyan"
-        ))
         
-        console.print("[green]1[/green]. Last 50 lines")
-        console.print("[green]2[/green]. Last 100 lines")
-        console.print("[green]3[/green]. Last 200 lines")
-        console.print("[green]4[/green]. Follow logs (real-time)")
-        console.print("[green]0[/green]. Back")
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│                    [bold cyan]VIEW LOGS[/bold cyan]                          │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
+        
+        console.print("  [1] Last 50 lines")
+        console.print("  [2] Last 100 lines")
+        console.print("  [3] Last 200 lines")
+        console.print("  [4] Follow logs (real-time)")
+        console.print("  [0] Back")
+        console.print()
         
         choice = Prompt.ask("Select option", choices=["0", "1", "2", "3", "4"])
         
@@ -453,7 +508,7 @@ class UnboundManagerCLI:
         elif choice == "3":
             self.troubleshooter.view_logs(200)
         elif choice == "4":
-            console.print("[cyan]Following logs... Press Ctrl+C to stop[/cyan]\n")
+            console.print("\n[cyan]Following logs... Press Ctrl+C to stop[/cyan]\n")
             try:
                 run_command(["journalctl", "-u", "unbound", "-f"])
             except KeyboardInterrupt:
@@ -466,15 +521,17 @@ class UnboundManagerCLI:
     def installation_menu(self) -> None:
         """Installation submenu."""
         console.clear()
-        console.print(Panel.fit(
-            "[bold cyan]Installation Options[/bold cyan]",
-            border_style="cyan"
-        ))
         
-        console.print("[green]1[/green]. Fresh Installation")
-        console.print("[green]2[/green]. Fix Existing Installation")
-        console.print("[green]3[/green]. Reinstall Unbound")
-        console.print("[green]0[/green]. Back")
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│              [bold cyan]INSTALLATION MANAGER[/bold cyan]                      │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
+        
+        console.print("  [1] Fresh Installation")
+        console.print("  [2] Fix Existing Installation")
+        console.print("  [3] Reinstall Unbound")
+        console.print("  [0] Back")
+        console.print()
         
         choice = Prompt.ask("Select option", choices=["0", "1", "2", "3"])
         
@@ -489,57 +546,58 @@ class UnboundManagerCLI:
     def show_help(self) -> None:
         """Show help information."""
         console.clear()
-        console.print(Panel.fit(
-            "[bold cyan]Unbound Manager Help[/bold cyan]",
-            border_style="cyan"
-        ))
         
-        help_text = """
-[bold]Navigation:[/bold]
-  ↑/↓ or j/k  : Navigate menu
-  Enter       : Select item
-  Esc or b    : Go back
-  h           : Show this help
-  q           : Exit program
-
-[bold]Quick Keys:[/bold]
-  1-9         : Quick select menu item
-  /           : Search (if available)
-
-[bold]Common Tasks:[/bold]
-  • Start Services: Quick way to get Unbound running
-  • View Status: Check if everything is working
-  • View Logs: See what's happening
-  • Edit Configuration: Modify DNS settings
-  • Run Diagnostics: Check for problems
-
-[bold]First Time Setup:[/bold]
-  1. Run 'Installation Options' → 'Fresh Installation'
-  2. Configure your settings in 'Configuration'
-  3. Start services from main menu
-
-[bold]Documentation:[/bold]
-  GitHub: https://github.com/regix1/unbound-manager
-  
-[bold]Support:[/bold]
-  Report issues on GitHub
-        """
-        console.print(help_text)
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│                      [bold cyan]HELP[/bold cyan]                              │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
+        
+        help_sections = [
+            ("[bold]Navigation:[/bold]", [
+                "↑/↓ or j/k    Navigate menu",
+                "Enter         Select item",
+                "ESC or b      Go back",
+                "h             Show this help",
+                "q             Exit program"
+            ]),
+            ("[bold]Quick Keys:[/bold]", [
+                "s             Service control",
+                "t             Status",
+                "l             View logs",
+                "1-9           Quick select"
+            ]),
+            ("[bold]Common Tasks:[/bold]", [
+                "Service Control    Start/stop DNS services",
+                "System Status      Check service health",
+                "View Logs          Monitor activity",
+                "Configuration      Modify settings",
+                "Diagnostics        Troubleshoot issues"
+            ])
+        ]
+        
+        for title, items in help_sections:
+            console.print(title)
+            for item in items:
+                console.print(f"  {item}")
+            console.print()
+        
+        console.print("─" * 60)
+        console.print("\n[bold]Documentation:[/bold]")
+        console.print("  https://github.com/regix1/unbound-manager")
         console.print("\n[dim]Press Enter to continue...[/dim]")
         input()
     
     def update_manager(self) -> None:
-        """Update Unbound Manager to the latest version."""
+        """Update Unbound Manager."""
         console.clear()
-        console.print(Panel.fit(
-            "[bold cyan]Update Unbound Manager[/bold cyan]",
-            border_style="cyan"
-        ))
         
-        console.print(f"[cyan]Current version:[/cyan] {APP_VERSION}")
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│              [bold cyan]UPDATE UNBOUND MANAGER[/bold cyan]                   │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
         
-        # Check for updates
-        console.print("[yellow]Checking for updates...[/yellow]")
+        console.print(f"Current version: {APP_VERSION}")
+        console.print("\n[yellow]Checking for updates...[/yellow]")
         
         try:
             import requests
@@ -550,43 +608,41 @@ class UnboundManagerCLI:
             
             if response.status_code == 200:
                 remote_version = response.text.strip()
-                console.print(f"[cyan]Latest version:[/cyan] {remote_version}")
+                console.print(f"Latest version:  {remote_version}")
                 
                 if remote_version != APP_VERSION:
-                    console.print("\n[yellow]⚠ An update is available![/yellow]")
+                    console.print("\n[yellow]Update available![/yellow]")
                     if prompt_yes_no("\nUpdate now?", default=True):
                         self.perform_update()
                 else:
-                    console.print("\n[green]✓ You are running the latest version[/green]")
+                    console.print("\n[green]✓ Already up to date[/green]")
             else:
                 console.print("[yellow]Could not check for updates[/yellow]")
                 
         except Exception as e:
-            console.print(f"[yellow]Could not check for updates: {e}[/yellow]")
+            console.print(f"[yellow]Update check failed: {e}[/yellow]")
         
         console.print("\n[dim]Press Enter to continue...[/dim]")
         input()
     
     def perform_update(self) -> None:
         """Perform the update."""
-        console.print("\n[cyan]Updating Unbound Manager...[/cyan]")
+        console.print("\n[cyan]Updating...[/cyan]")
         
         try:
-            # Find the source directory
             source_dir = Path.home() / "unbound-manager"
             
             if source_dir.exists() and (source_dir / ".git").exists():
-                # Git pull
-                console.print("[cyan]Pulling latest changes...[/cyan]")
-                run_command(["git", "pull"], cwd=source_dir)
-                
-                # Reinstall
-                console.print("[cyan]Reinstalling package...[/cyan]")
-                run_command(["pip3", "install", "-e", "."], cwd=source_dir)
+                with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+                    task = progress.add_task("Pulling latest changes...", total=None)
+                    run_command(["git", "pull"], cwd=source_dir)
+                    progress.update(task, description="Reinstalling package...")
+                    run_command(["pip3", "install", "-e", "."], cwd=source_dir)
+                    progress.update(task, completed=True)
                 
                 console.print("[green]✓ Update complete! Please restart the program.[/green]")
             else:
-                console.print("[yellow]Source directory not found. Please update manually.[/yellow]")
+                console.print("[yellow]Source directory not found. Manual update required.[/yellow]")
                 
         except Exception as e:
             console.print(f"[red]Update failed: {e}[/red]")
@@ -594,23 +650,23 @@ class UnboundManagerCLI:
     def uninstall_manager(self) -> None:
         """Uninstall Unbound Manager."""
         console.clear()
-        console.print(Panel.fit(
-            "[bold red]Uninstall Unbound Manager[/bold red]\n\n"
-            "This will remove the Unbound Manager tool.\n"
-            "Your DNS configuration will be preserved.",
-            border_style="red"
-        ))
+        
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│            [bold red]UNINSTALL UNBOUND MANAGER[/bold red]                  │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
+        console.print("[yellow]Warning: This will remove the Unbound Manager tool.[/yellow]")
+        console.print("Your DNS configuration will be preserved.")
+        console.print()
         
         if not prompt_yes_no("Are you sure you want to uninstall?", default=False):
             return
         
-        # Backup configuration first
-        console.print("[cyan]Creating backup...[/cyan]")
+        console.print("\n[cyan]Creating backup...[/cyan]")
         backup_path = self.backup_manager.create_backup("before_uninstall")
         console.print(f"[green]✓[/green] Backup saved to: {backup_path}")
         
-        # Uninstall
-        console.print("[yellow]Uninstalling Unbound Manager...[/yellow]")
+        console.print("\n[yellow]Uninstalling...[/yellow]")
         try:
             run_command(["pip3", "uninstall", "-y", "unbound-manager"])
             console.print("[green]✓ Unbound Manager uninstalled[/green]")
@@ -632,7 +688,7 @@ class UnboundManagerCLI:
             
             # Check if we should exit
             if result is False:
-                console.print("\n[cyan]Thank you for using Unbound Manager![/cyan]")
+                console.print("\n[cyan]Goodbye![/cyan]")
                 break
             
             # Handle other results
@@ -647,7 +703,7 @@ def main():
         cli.run()
         return 0
     except KeyboardInterrupt:
-        console.print("\n[yellow]Application terminated by user[/yellow]")
+        console.print("\n[yellow]Interrupted[/yellow]")
         return 1
     except Exception as e:
         console.print(f"\n[red]Fatal error: {e}[/red]")

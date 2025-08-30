@@ -17,7 +17,7 @@ class MenuItem:
     """Represents a single menu item."""
     name: str
     action: Callable
-    icon: str = "•"
+    prefix: str = ""
     description: str = ""
     key: Optional[str] = None
     style: str = "cyan"
@@ -28,7 +28,7 @@ class MenuCategory:
     """Represents a category of menu items."""
     name: str
     items: List[MenuItem] = None
-    icon: str = "📁"
+    prefix: str = ""
     expanded: bool = False
     
     def __post_init__(self):
@@ -49,8 +49,6 @@ class InteractiveMenu:
         self.current_index = 0
         self.in_category = False
         self.category_index = 0
-        self.search_mode = False
-        self.search_query = ""
     
     def add_item(self, item: MenuItem) -> None:
         """Add a top-level menu item."""
@@ -70,14 +68,14 @@ class InteractiveMenu:
             
             # Handle special keys
             if key == '\x1b':  # ESC sequence
-                key += sys.stdin.read(2)
-                if key == '\x1b[A':  # Up arrow
+                next_chars = sys.stdin.read(2)
+                if next_chars == '[A':  # Up arrow
                     return 'UP'
-                elif key == '\x1b[B':  # Down arrow
+                elif next_chars == '[B':  # Down arrow
                     return 'DOWN'
-                elif key == '\x1b[C':  # Right arrow
+                elif next_chars == '[C':  # Right arrow
                     return 'RIGHT'
-                elif key == '\x1b[D':  # Left arrow
+                elif next_chars == '[D':  # Left arrow
                     return 'LEFT'
                 else:
                     return 'ESC'
@@ -95,10 +93,11 @@ class InteractiveMenu:
         console.clear()
         
         # Header
-        console.print()
-        console.print("[bold cyan]UNBOUND DNS MANAGER[/bold cyan] - Interactive Menu")
-        console.print("━" * 50, style="dim")
-        console.print("[dim]↑/↓: Navigate | Enter: Select | ESC: Back | q: Quit[/dim]")
+        console.print("╔" + "═" * 78 + "╗")
+        console.print("║ [bold cyan]UNBOUND DNS MANAGER[/bold cyan] - Interactive Menu" + " " * 35 + "║")
+        console.print("╠" + "═" * 78 + "╣")
+        console.print("║ [dim]↑↓ Navigate │ Enter: Select │ ESC: Back │ h: Help │ q: Exit[/dim]" + " " * 15 + "║")
+        console.print("╚" + "═" * 78 + "╝")
         console.print()
         
         # Display items
@@ -110,50 +109,47 @@ class InteractiveMenu:
             if isinstance(item, MenuCategory):
                 # Category display
                 if is_selected:
-                    prefix = "▶" if not item.expanded else "▼"
-                    style = "bold yellow on blue"
+                    arrow = "▼" if item.expanded else "►"
+                    console.print(f"  [bold yellow on blue] {arrow} {item.prefix} {item.name:<50}[/bold yellow on blue]")
                 else:
-                    prefix = "▶" if not item.expanded else "▼"
-                    style = "bold cyan"
-                
-                text = f" {prefix} {item.icon} {item.name}"
-                if is_selected:
-                    console.print(f"[{style}]{text:<48}[/{style}]")
-                else:
-                    console.print(f"[{style}]{text}[/{style}]")
+                    arrow = "▼" if item.expanded else "►"
+                    console.print(f"  [bold cyan]{arrow} {item.prefix} {item.name}[/bold cyan]")
                     
             elif isinstance(item, MenuItem):
                 # Item display
-                indent = "    " if parent_idx is not None else ""
+                indent = "    " if parent_idx is not None else "  "
                 
                 if is_selected:
-                    style = f"bold white on {item.style}" if item.style != "red" else "bold white on red"
-                    marker = "→"
+                    # Build display text
+                    display_text = f"{item.prefix} {item.name}" if item.prefix else item.name
+                    if item.key:
+                        display_text = f"{display_text}"
+                    
+                    # Show with selection highlight
+                    if item.style == "red":
+                        console.print(f"{indent}[bold white on red] → {display_text:<52}[/bold white on red]")
+                    else:
+                        console.print(f"{indent}[bold white on blue] → {display_text:<52}[/bold white on blue]")
+                    
+                    # Show description below if available
+                    if item.description:
+                        console.print(f"{indent}   [dim]{item.description}[/dim]")
                 else:
-                    style = item.style
-                    marker = " "
-                
-                # Build item text
-                text = f"{indent}{marker} {item.icon} {item.name}"
-                if item.key:
-                    text += f" [{item.key}]"
-                
-                # Add description if selected
-                if is_selected and item.description:
-                    text = f"{text:<40} {item.description}"
-                
-                if is_selected:
-                    console.print(f"[{style}]{text:<48}[/{style}]")
-                else:
-                    console.print(f"[{style}]{text}[/{style}]")
+                    display_text = f"{item.prefix} {item.name}" if item.prefix else item.name
+                    console.print(f"{indent}[{item.style}]  {display_text}[/{item.style}]")
         
-        # Show help hint at bottom
+        # Footer with current item info
         console.print()
-        console.print("━" * 50, style="dim")
+        console.print("─" * 80)
+        
         if self.current_index < len(visible_items):
             current_item = visible_items[self.current_index][0]
-            if isinstance(current_item, MenuItem) and current_item.description:
-                console.print(f"[dim]{current_item.description}[/dim]")
+            if isinstance(current_item, MenuCategory):
+                console.print("[dim]Press Enter to expand/collapse category[/dim]")
+            elif isinstance(current_item, MenuItem) and current_item.description and self.current_index < len(visible_items):
+                # Description already shown inline, so just show quick key hint
+                if current_item.key:
+                    console.print(f"[dim]Quick key: {current_item.key}[/dim]")
     
     def _get_visible_items(self) -> List[tuple]:
         """Get list of currently visible items with their metadata."""
@@ -211,17 +207,41 @@ class InteractiveMenu:
         if self.current_index < len(visible_items) - 1:
             self.current_index += 1
     
-    def quick_select(self, number: int) -> Any:
+    def collapse_all(self) -> None:
+        """Collapse all categories."""
+        for item in self.items:
+            if isinstance(item, MenuCategory):
+                item.expanded = False
+    
+    def quick_select_by_key(self, key: str) -> Any:
+        """Quick select an item by its shortcut key."""
+        visible_items = self._get_visible_items()
+        
+        for idx, (item, _, _) in enumerate(visible_items):
+            if isinstance(item, MenuItem) and item.key == key.lower():
+                self.current_index = idx
+                return self.handle_selection()
+        
+        return None
+    
+    def quick_select_by_number(self, number: int) -> Any:
         """Quick select an item by number."""
         visible_items = self._get_visible_items()
         
-        # Filter only MenuItems (not categories)
-        menu_items = [(idx, item) for idx, (item, _, _) in enumerate(visible_items) 
-                      if isinstance(item, MenuItem)]
+        # Get numbered items (MenuItems only, not categories)
+        numbered_items = []
+        item_count = 0
         
-        if 0 < number <= len(menu_items):
-            self.current_index = menu_items[number - 1][0]
-            return self.handle_selection()
+        for idx, (item, _, parent_idx) in enumerate(visible_items):
+            if isinstance(item, MenuItem):
+                item_count += 1
+                numbered_items.append((item_count, idx))
+        
+        # Find and select the item
+        for num, idx in numbered_items:
+            if num == number:
+                self.current_index = idx
+                return self.handle_selection()
         
         return None
     
@@ -233,6 +253,7 @@ class InteractiveMenu:
             try:
                 key = self.get_key()
                 
+                # Navigation
                 if key == 'UP' or key == 'k':
                     self.navigate_up()
                 elif key == 'DOWN' or key == 'j':
@@ -242,34 +263,35 @@ class InteractiveMenu:
                     if result is False:
                         return False
                 elif key == 'ESC' or key == 'b':
-                    # Collapse all categories and go to top
-                    for item in self.items:
-                        if isinstance(item, MenuCategory):
-                            item.expanded = False
+                    # Go back: collapse categories and return to top
+                    self.collapse_all()
                     self.current_index = 0
+                
+                # Quick keys
                 elif key == 'q' or key == 'Q':
                     return False
                 elif key == 'h' or key == 'H' or key == '?':
-                    # Find and execute help item
-                    for item in self.items:
-                        if isinstance(item, MenuItem) and item.key == 'h':
-                            console.clear()
-                            item.action()
-                            break
-                elif key.isdigit():
-                    # Quick number selection
-                    num = int(key)
-                    result = self.quick_select(num)
+                    # Find and execute help
+                    result = self.quick_select_by_key('h')
                     if result is False:
                         return False
-                elif key == '/':
-                    # Search mode (future enhancement)
-                    console.print("\n[yellow]Search not yet implemented[/yellow]")
-                    console.print("[dim]Press Enter to continue...[/dim]")
-                    input()
+                
+                # Letter shortcuts
+                elif key.lower() in 'stlcdma':
+                    result = self.quick_select_by_key(key.lower())
+                    if result is False:
+                        return False
+                
+                # Number selection
+                elif key.isdigit() and key != '0':
+                    num = int(key)
+                    result = self.quick_select_by_number(num)
+                    if result is False:
+                        return False
                     
             except KeyboardInterrupt:
-                console.print("\n[yellow]Use 'q' to quit or ESC to go back[/yellow]")
+                # Handle Ctrl+C gracefully
+                console.print("\n\n[yellow]Use 'q' to quit or ESC to go back[/yellow]")
                 console.print("[dim]Press Enter to continue...[/dim]")
                 input()
 
@@ -287,18 +309,20 @@ class SimpleMenu:
     
     def display(self) -> None:
         """Display the menu."""
-        console.print(Panel.fit(
-            f"[bold cyan]{self.title}[/bold cyan]",
-            border_style="cyan"
-        ))
+        console.print("┌" + "─" * 58 + "┐")
+        console.print(f"│  [bold cyan]{self.title:^54}[/bold cyan]  │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
         
         for idx, (name, _, desc) in enumerate(self.items, 1):
             if desc:
-                console.print(f"[green]{idx}[/green]. {name} - [dim]{desc}[/dim]")
+                console.print(f"  [{idx}] {name}")
+                console.print(f"      [dim]{desc}[/dim]")
             else:
-                console.print(f"[green]{idx}[/green]. {name}")
+                console.print(f"  [{idx}] {name}")
         
-        console.print("[green]0[/green]. Back")
+        console.print("  [0] Back")
+        console.print()
     
     def run(self) -> Any:
         """Run the menu and get selection."""
