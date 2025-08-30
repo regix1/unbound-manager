@@ -364,6 +364,8 @@ class UnboundManagerCLI:
     
     def manage_services_quick(self) -> None:
         """Quick service management."""
+        from .utils import restart_service
+        
         console.clear()
         
         # Header
@@ -417,6 +419,8 @@ class UnboundManagerCLI:
     
     def manage_services_advanced(self) -> None:
         """Advanced service management."""
+        from .utils import restart_service
+        
         console.clear()
         
         console.print("┌" + "─" * 58 + "┐")
@@ -434,8 +438,6 @@ class UnboundManagerCLI:
         console.print()
         
         choice = Prompt.ask("Select action", choices=["0", "1", "2", "3", "4", "5", "6"])
-        
-        from .utils import restart_service
         
         actions = {
             "1": ("Starting Unbound...", lambda: restart_service("unbound")),
