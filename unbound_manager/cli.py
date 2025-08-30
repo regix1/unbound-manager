@@ -339,162 +339,159 @@ class UnboundManagerCLI:
             console.print(f"[yellow]Could not check git status: {e}[/yellow]")
     
     def perform_update(self) -> None:
-        """Perform auto-update."""
+        """Perform auto-update for both development and global installs."""
         console.print("\n[cyan]Starting update process...[/cyan]")
         
         try:
-            # Check if this is a development install
             import site
-            import sys
+            import tempfile
+            import shutil
             
-            # Get the actual location of this file
+            # Check if this is a development or global install
             current_file = Path(__file__).resolve()
-            
-            # Check if we're in site-packages (global install)
             site_packages_paths = site.getsitepackages() + [site.getusersitepackages()]
             is_global_install = any(str(current_file).startswith(str(Path(p).resolve())) 
                                 for p in site_packages_paths if p)
             
             if is_global_install:
                 console.print("[yellow]Detected global installation.[/yellow]")
-                console.print("[cyan]For global installs, update by reinstalling:[/cyan]")
-                console.print()
-                console.print("  # Option 1: Update from existing source")
-                console.print("  cd ~/unbound-manager")
-                console.print("  git pull")
-                console.print("  pip3 install . --upgrade")
-                console.print()
-                console.print("  # Option 2: Fresh install")
-                console.print("  pip3 uninstall unbound-manager")
-                console.print("  cd ~")
-                console.print("  rm -rf unbound-manager")
-                console.print("  git clone https://github.com/regix1/unbound-manager.git")
-                console.print("  cd unbound-manager")
-                console.print("  pip3 install .")
-                console.print()
-                console.print("[yellow]Note: For auto-updates, use development install:[/yellow]")
-                console.print("  pip3 install -e .")
-                return
-            
-            # For development installs, proceed with git update
-            project_dir = Path(__file__).parent.parent
-            
-            # Check if git repository exists
-            if not (project_dir / ".git").exists():
-                console.print("[yellow]Git repository not found. Attempting to reinitialize...[/yellow]")
                 
-                # Try to reinitialize git
-                result = run_command(["git", "init"], cwd=project_dir, check=False)
-                if result.returncode != 0:
-                    console.print("[red]Cannot initialize git in this directory[/red]")
-                    console.print("[yellow]Reinstall with development mode for auto-updates:[/yellow]")
+                # Check if source directory exists
+                source_dir = Path.home() / "unbound-manager"
+                
+                if source_dir.exists() and (source_dir / ".git").exists():
+                    # Update from existing source
+                    console.print(f"[cyan]Found source directory at {source_dir}[/cyan]")
+                    console.print("[cyan]Updating source code...[/cyan]")
+                    
+                    # Pull latest changes
+                    run_command(["git", "fetch", "origin"], cwd=source_dir, check=False)
+                    
+                    # Determine branch
+                    result = run_command(["git", "branch", "-r"], cwd=source_dir, check=False)
+                    branch = "main" if "origin/main" in result.stdout else "master"
+                    
+                    # Reset to latest
+                    run_command(["git", "reset", "--hard", f"origin/{branch}"], cwd=source_dir, check=False)
+                    
+                    console.print("[cyan]Reinstalling from updated source...[/cyan]")
+                    result = run_command(["pip3", "install", ".", "--upgrade"], cwd=source_dir, check=False)
+                    
+                    if result.returncode == 0:
+                        version_file = source_dir / "VERSION"
+                        if version_file.exists():
+                            new_version = version_file.read_text().strip()
+                            console.print(f"[green]✓ Updated to version {new_version}![/green]")
+                        console.print("[yellow]Restart unbound-manager to use the new version[/yellow]")
+                        
+                        if prompt_yes_no("Restart now?"):
+                            import os
+                            import sys
+                            os.execv(sys.executable, [sys.executable] + sys.argv)
+                    else:
+                        console.print("[red]Update failed[/red]")
+                        
+                else:
+                    # No source directory, download fresh
+                    console.print("[cyan]Source directory not found. Downloading fresh copy...[/cyan]")
+                    
+                    with tempfile.TemporaryDirectory() as tmpdir:
+                        tmp_path = Path(tmpdir)
+                        
+                        # Clone repository
+                        console.print("[cyan]Cloning repository...[/cyan]")
+                        result = run_command(
+                            ["git", "clone", "https://github.com/regix1/unbound-manager.git"],
+                            cwd=tmp_path,
+                            check=False
+                        )
+                        
+                        if result.returncode != 0:
+                            console.print("[red]Could not clone repository[/red]")
+                            return
+                        
+                        clone_dir = tmp_path / "unbound-manager"
+                        
+                        # Save to home directory for future updates
+                        if not source_dir.exists():
+                            console.print(f"[cyan]Saving source to {source_dir} for future updates...[/cyan]")
+                            shutil.copytree(clone_dir, source_dir)
+                        
+                        # Install update
+                        console.print("[cyan]Installing update...[/cyan]")
+                        result = run_command(
+                            ["pip3", "install", ".", "--upgrade"],
+                            cwd=clone_dir,
+                            check=False
+                        )
+                        
+                        if result.returncode == 0:
+                            version_file = clone_dir / "VERSION"
+                            if version_file.exists():
+                                new_version = version_file.read_text().strip()
+                                console.print(f"[green]✓ Updated to version {new_version}![/green]")
+                            console.print("[yellow]Restart unbound-manager to use the new version[/yellow]")
+                            
+                            if prompt_yes_no("Restart now?"):
+                                import os
+                                import sys
+                                os.execv(sys.executable, [sys.executable] + sys.argv)
+                        else:
+                            console.print("[red]Installation failed[/red]")
+            
+            else:
+                # Development install - use existing git-based update
+                project_dir = Path(__file__).parent.parent
+                
+                if not (project_dir / ".git").exists():
+                    console.print("[red]Git repository not found[/red]")
+                    console.print("[yellow]Reinstall with:[/yellow]")
                     console.print("  cd ~")
-                    console.print("  rm -rf unbound-manager")
                     console.print("  git clone https://github.com/regix1/unbound-manager.git")
                     console.print("  cd unbound-manager")
                     console.print("  pip3 install -e .")
                     return
                 
-                # Add remote
-                run_command(
-                    ["git", "remote", "add", "origin", "https://github.com/regix1/unbound-manager.git"],
-                    cwd=project_dir,
-                    check=False
-                )
+                console.print("[cyan]Fetching latest changes...[/cyan]")
                 
-                # Fetch
-                result = run_command(["git", "fetch", "origin"], cwd=project_dir, check=False)
-                if result.returncode != 0:
-                    console.print("[red]Cannot fetch from repository[/red]")
-                    return
+                # Fetch updates
+                run_command(["git", "fetch", "origin"], cwd=project_dir, check=False)
                 
                 # Determine branch
                 result = run_command(["git", "branch", "-r"], cwd=project_dir, check=False)
                 branch = "main" if "origin/main" in result.stdout else "master"
                 
-                # Reset to origin
-                console.print(f"[cyan]Resetting to origin/{branch}...[/cyan]")
+                # Check if up to date
                 result = run_command(
-                    ["git", "reset", "--hard", f"origin/{branch}"],
+                    ["git", "rev-list", f"HEAD...origin/{branch}", "--count"],
                     cwd=project_dir,
                     check=False
                 )
                 
-                if result.returncode != 0:
-                    console.print("[red]Could not reset to origin[/red]")
+                if result.returncode == 0 and result.stdout.strip() == "0":
+                    console.print("[green]Already up to date![/green]")
                     return
+                
+                # Update
+                console.print(f"[cyan]Updating from {branch}...[/cyan]")
+                run_command(["git", "stash"], cwd=project_dir, check=False)
+                run_command(["git", "reset", "--hard", f"origin/{branch}"], cwd=project_dir, check=False)
+                
+                console.print("[cyan]Updating Python package...[/cyan]")
+                result = run_command(["pip3", "install", "-e", "."], cwd=project_dir, check=False)
+                
+                if result.returncode == 0:
+                    version_file = project_dir / "VERSION"
+                    if version_file.exists():
+                        new_version = version_file.read_text().strip()
+                        console.print(f"[green]✓ Updated to version {new_version}![/green]")
+                    console.print("[yellow]Restart unbound-manager to use the new version[/yellow]")
                     
-                console.print("[green]✓ Git repository reinitialized[/green]")
-            
-            # Normal update process for development installs
-            console.print("[cyan]Fetching latest changes...[/cyan]")
-            
-            # Ensure origin exists
-            run_command(
-                ["git", "remote", "add", "origin", "https://github.com/regix1/unbound-manager.git"],
-                cwd=project_dir,
-                check=False
-            )
-            
-            # Fetch
-            result = run_command(["git", "fetch", "origin"], cwd=project_dir, check=False)
-            if result.returncode != 0:
-                console.print("[red]Could not fetch updates[/red]")
-                return
-            
-            # Determine branch
-            result = run_command(["git", "branch", "-r"], cwd=project_dir, check=False)
-            branch = "main" if "origin/main" in result.stdout else "master"
-            
-            # Check for updates
-            result = run_command(
-                ["git", "rev-list", f"HEAD...origin/{branch}", "--count"],
-                cwd=project_dir,
-                check=False
-            )
-            
-            if result.returncode == 0 and result.stdout.strip() == "0":
-                console.print("[green]Already up to date![/green]")
-                return
-            
-            # Stash local changes
-            console.print("[cyan]Saving local changes...[/cyan]")
-            run_command(["git", "stash"], cwd=project_dir, check=False)
-            
-            # Update
-            console.print(f"[cyan]Updating from {branch}...[/cyan]")
-            result = run_command(
-                ["git", "reset", "--hard", f"origin/{branch}"],
-                cwd=project_dir,
-                check=False
-            )
-            
-            if result.returncode != 0:
-                console.print("[red]Update failed[/red]")
-                return
-            
-            console.print("[green]✓ Code updated[/green]")
-            
-            # Reinstall package
-            console.print("[cyan]Updating Python package...[/cyan]")
-            result = run_command(["pip3", "install", "-e", "."], cwd=project_dir, check=False)
-            
-            if result.returncode == 0:
-                version_file = project_dir / "VERSION"
-                if version_file.exists():
-                    new_version = version_file.read_text().strip()
-                    console.print(f"[green]✓ Updated to version {new_version}![/green]")
-                
-                console.print("[yellow]Restart unbound-manager to use the new version[/yellow]")
-                
-                if prompt_yes_no("Restart now?"):
-                    console.print("[cyan]Restarting...[/cyan]")
-                    import os
-                    import sys
-                    os.execv(sys.executable, [sys.executable] + sys.argv)
-            else:
-                console.print("[yellow]Could not update package[/yellow]")
-                
+                    if prompt_yes_no("Restart now?"):
+                        import os
+                        import sys
+                        os.execv(sys.executable, [sys.executable] + sys.argv)
+                        
         except Exception as e:
             console.print(f"[red]Update error: {e}[/red]")
     
