@@ -197,6 +197,66 @@ class UnboundManagerCLI:
             run_command(["systemctl", "daemon-reload"], check=False)
             console.print("[green]✓[/green] Unbound removed")
         
+        # Ask about removing Redis
+        remove_redis = prompt_yes_no(
+            "\n[yellow]Also remove Redis server?[/yellow]\n"
+            "[cyan]Redis was installed for caching support[/cyan]",
+            default=False
+        )
+        
+        if remove_redis:
+            console.print("[yellow]Stopping Redis service...[/yellow]")
+            run_command(["systemctl", "stop", "redis-server"], check=False)
+            run_command(["systemctl", "disable", "redis-server"], check=False)
+            
+            console.print("[yellow]Removing Redis packages...[/yellow]")
+            run_command(["apt-get", "remove", "-y", "redis-server", "redis-tools"], check=False)
+            run_command(["apt-get", "autoremove", "-y"], check=False)
+            
+            # Remove Redis directories
+            for redis_dir in ["/etc/redis", "/var/lib/redis", "/var/log/redis", "/var/run/redis"]:
+                if Path(redis_dir).exists():
+                    import shutil
+                    shutil.rmtree(redis_dir, ignore_errors=True)
+            
+            console.print("[green]✓[/green] Redis removed")
+        
+        # Ask about removing build dependencies
+        remove_deps = prompt_yes_no(
+            "\n[yellow]Remove build dependencies?[/yellow]\n"
+            "[cyan]These include: build-essential, libssl-dev, etc.[/cyan]\n"
+            "[red]WARNING: Other applications may depend on these![/red]",
+            default=False
+        )
+        
+        if remove_deps:
+            console.print("[yellow]Removing development packages...[/yellow]")
+            deps = [
+                "build-essential", "libssl-dev", "libexpat1-dev",
+                "libevent-dev", "libhiredis-dev", "libnghttp2-dev",
+                "libsystemd-dev", "swig", "protobuf-c-compiler",
+                "libprotobuf-c-dev"
+            ]
+            for dep in deps:
+                run_command(["apt-get", "remove", "-y", dep], check=False)
+            run_command(["apt-get", "autoremove", "-y"], check=False)
+            console.print("[green]✓[/green] Development packages removed")
+        
+        # Ask about Python dependencies
+        remove_python_deps = prompt_yes_no(
+            "\n[yellow]Remove Python dependencies?[/yellow]\n"
+            "[cyan]These include: rich, jinja2, pyyaml, dnspython, etc.[/cyan]\n"
+            "[red]WARNING: Other Python applications may use these![/red]",
+            default=False
+        )
+        
+        if remove_python_deps:
+            console.print("[yellow]Removing Python packages...[/yellow]")
+            python_deps = ["rich", "typer", "jinja2", "pyyaml", "requests", "dnspython", "redis", "psutil"]
+            for dep in python_deps:
+                run_command(["pip3", "uninstall", "-y", dep], check=False)
+            console.print("[green]✓[/green] Python dependencies removed")
+        
         # Uninstall Python package
         console.print("[yellow]Removing Unbound Manager Python package...[/yellow]")
         try:
