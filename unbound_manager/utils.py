@@ -196,9 +196,9 @@ def download_file(url: str, destination: Path, timeout: int = 30) -> bool:
         return False
 
 
-def prompt_yes_no(question: str, default: bool = False) -> bool:
+def prompt_yes_no(question: str, default: bool = True) -> bool:
     """
-    Prompt the user for a yes/no answer with clear indication of options.
+    Prompt the user for a yes/no answer.
     
     Args:
         question: The question to ask
@@ -207,31 +207,8 @@ def prompt_yes_no(question: str, default: bool = False) -> bool:
     Returns:
         bool: True for yes, False for no
     """
-    # Create the prompt suffix based on default
-    if default:
-        prompt_suffix = "\\[Y/n]"  # Default is Yes (capital Y)
-    else:
-        prompt_suffix = "\\[y/N]"  # Default is No (capital N)
-    
-    # Build the full prompt - escape brackets to prevent Rich from interpreting them
-    full_prompt = f"[cyan]{question} {prompt_suffix}: [/cyan]"
-    
-    # Use console.input which should preserve our formatting
-    response = console.input(full_prompt).strip().lower()
-    
-    # If empty response, use default
-    if not response:
-        return default
-    
-    # Accept various forms of yes/no
-    if response in ['y', 'yes', 'yeah', 'yep', 'sure', 'ok', 'okay']:
-        return True
-    elif response in ['n', 'no', 'nope', 'nah']:
-        return False
-    else:
-        # If unclear response, ask again
-        console.print("[yellow]Please answer with 'y' for yes or 'n' for no.[/yellow]")
-        return prompt_yes_no(question, default)
+    from rich.prompt import Confirm
+    return Confirm.ask(question, default=default)
 
 
 def get_system_info() -> Dict[str, Any]:
@@ -283,13 +260,29 @@ def install_packages(packages: List[str]) -> bool:
         console.print(f"[cyan]Installing packages: {', '.join(packages)}[/cyan]")
         
         # Update package list
-        run_command(["apt", "update"], check=True)
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+        ) as progress:
+            task = progress.add_task("Updating package list...", total=None)
+            run_command(["apt", "update"], check=True)
+            progress.update(task, completed=True)
         
         # Install packages
-        run_command(
-            ["apt", "install", "-y"] + packages,
-            check=True,
-        )
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+        ) as progress:
+            task = progress.add_task(f"Installing {len(packages)} packages...", total=None)
+            run_command(
+                ["apt", "install", "-y"] + packages,
+                check=True,
+            )
+            progress.update(task, completed=True)
+        
+        console.print("[green]✓[/green] Packages installed")
         return True
     except Exception as e:
         console.print(f"[red]Failed to install packages: {e}[/red]")

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Main CLI interface for Unbound Manager."""
+"""Main CLI interface for Unbound Manager with interactive menu."""
 
 import sys
 import os
 import time
 import shutil
 import tempfile
-from typing import Optional
+from typing import Optional, List, Tuple, Callable
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
@@ -26,12 +26,13 @@ from .dnssec import DNSSECManager
 from .troubleshooter import Troubleshooter
 from .tester import UnboundTester
 from .backup import BackupManager
+from .menu_system import InteractiveMenu, MenuItem, MenuCategory
 
 console = Console()
 
 
 class UnboundManagerCLI:
-    """Main CLI class for Unbound Manager."""
+    """Main CLI class for Unbound Manager with interactive menu."""
     
     def __init__(self):
         """Initialize the CLI."""
@@ -42,283 +43,506 @@ class UnboundManagerCLI:
         self.troubleshooter = Troubleshooter()
         self.tester = UnboundTester()
         self.backup_manager = BackupManager()
+        self.menu = InteractiveMenu()
+        self.setup_menu()
     
     def show_banner(self) -> None:
-        """Display the application banner."""
+        """Display the application banner with status."""
         console.clear()
         
-        banner_text = Text()
-        banner_text.append("╔════════════════════════════════════════════════════════════════╗\n", style="blue")
-        banner_text.append("║                                                                ║\n", style="blue")
-        banner_text.append("║", style="blue")
-        banner_text.append("                UNBOUND DNS SERVER MANAGER                  ", style="bold white")
-        banner_text.append("║\n", style="blue")
-        banner_text.append("║", style="blue")
-        banner_text.append(f"                         Version {APP_VERSION}                        ", style="cyan")
-        banner_text.append("║\n", style="blue")
-        banner_text.append("║                                                                ║\n", style="blue")
-        banner_text.append("╚════════════════════════════════════════════════════════════════╝", style="blue")
+        # Get service status
+        unbound_status = check_service_status("unbound")
+        redis_status = check_service_status("redis-server")
         
-        console.print(Align.center(banner_text))
-        console.print(Align.center("[yellow]A complete solution for Unbound DNS server management[/yellow]"))
-        console.print(Align.center("[cyan]Secure, Reliable, and Easy to Configure[/cyan]\n"))
+        # Build status line
+        if unbound_status and redis_status:
+            status_color = "green"
+            status_text = "All Services Running"
+        elif unbound_status:
+            status_color = "yellow"
+            status_text = "Unbound Running | Redis Stopped"
+        elif redis_status:
+            status_color = "yellow"
+            status_text = "Unbound Stopped | Redis Running"
+        else:
+            status_color = "red"
+            status_text = "All Services Stopped"
+        
+        # Simple, clean banner
+        console.print()
+        console.print(f"[bold cyan]UNBOUND DNS MANAGER[/bold cyan] [dim]v{APP_VERSION}[/dim]")
+        console.print("━" * 40, style="dim")
+        console.print(f"[{status_color}]● {status_text}[/{status_color}]")
+        console.print()
     
-    def show_status(self) -> None:
-        """Show current system status."""
-        table = Table(title="System Status", title_style="bold cyan")
+    def setup_menu(self) -> None:
+        """Setup the interactive menu structure."""
+        # Quick Actions (most common tasks)
+        self.menu.add_item(MenuItem(
+            "Start/Stop Services",
+            self.manage_services_quick,
+            icon="⚡",
+            description="Quick service control"
+        ))
+        
+        self.menu.add_item(MenuItem(
+            "View Status",
+            self.show_detailed_status,
+            icon="📊",
+            description="System status and statistics"
+        ))
+        
+        self.menu.add_item(MenuItem(
+            "View Logs",
+            lambda: self.view_logs_interactive(),
+            icon="📜",
+            description="View recent logs"
+        ))
+        
+        # Configuration category
+        config_category = MenuCategory("Configuration", icon="⚙️")
+        config_category.add_item(MenuItem(
+            "Edit Configuration",
+            self.config_manager.manage_configuration,
+            description="Modify DNS settings"
+        ))
+        config_category.add_item(MenuItem(
+            "Access Control",
+            self.config_manager.edit_access_control,
+            description="Manage allowed networks"
+        ))
+        config_category.add_item(MenuItem(
+            "Redis Settings",
+            self.redis_manager.configure_redis,
+            description="Configure caching"
+        ))
+        config_category.add_item(MenuItem(
+            "DNSSEC",
+            self.dnssec_manager.manage_dnssec,
+            description="DNSSEC configuration"
+        ))
+        self.menu.add_category(config_category)
+        
+        # Maintenance category
+        maintenance_category = MenuCategory("Maintenance", icon="🔧")
+        maintenance_category.add_item(MenuItem(
+            "Backup Configuration",
+            self.backup_configuration_interactive,
+            description="Create backup"
+        ))
+        maintenance_category.add_item(MenuItem(
+            "Restore Configuration",
+            self.backup_manager.restore_backup,
+            description="Restore from backup"
+        ))
+        maintenance_category.add_item(MenuItem(
+            "Update Unbound",
+            self.installer.update_unbound,
+            description="Update DNS server"
+        ))
+        self.menu.add_category(maintenance_category)
+        
+        # Troubleshooting category
+        troubleshoot_category = MenuCategory("Troubleshooting", icon="🔍")
+        troubleshoot_category.add_item(MenuItem(
+            "Run Diagnostics",
+            self.troubleshooter.run_diagnostics,
+            description="Check for issues"
+        ))
+        troubleshoot_category.add_item(MenuItem(
+            "Test DNS",
+            self.tester.run_all_tests,
+            description="Test functionality"
+        ))
+        troubleshoot_category.add_item(MenuItem(
+            "Performance Test",
+            lambda: self.tester.test_performance(100),
+            description="Benchmark DNS"
+        ))
+        self.menu.add_category(troubleshoot_category)
+        
+        # Advanced category (less common tasks)
+        advanced_category = MenuCategory("Advanced", icon="🚀")
+        advanced_category.add_item(MenuItem(
+            "Install/Reinstall",
+            self.installation_menu,
+            description="Installation options"
+        ))
+        advanced_category.add_item(MenuItem(
+            "Regenerate Keys",
+            self.dnssec_manager.generate_control_keys,
+            description="Regenerate control keys"
+        ))
+        advanced_category.add_item(MenuItem(
+            "Update Manager",
+            self.update_manager,
+            description="Update this tool"
+        ))
+        advanced_category.add_item(MenuItem(
+            "Uninstall Manager",
+            self.uninstall_manager,
+            description="Remove this tool",
+            style="red"
+        ))
+        self.menu.add_category(advanced_category)
+        
+        # Add help and exit
+        self.menu.add_item(MenuItem(
+            "Help",
+            self.show_help,
+            icon="❓",
+            description="Show help",
+            key="h"
+        ))
+        
+        self.menu.add_item(MenuItem(
+            "Exit",
+            lambda: False,
+            icon="🚪",
+            description="Exit program",
+            key="q",
+            style="red"
+        ))
+    
+    def show_detailed_status(self) -> None:
+        """Show detailed system status."""
+        console.clear()
+        console.print(Panel.fit(
+            "[bold cyan]System Status[/bold cyan]",
+            border_style="cyan"
+        ))
+        
+        # Service status
+        table = Table(show_header=True, header_style="bold magenta")
         table.add_column("Service", style="cyan")
         table.add_column("Status", justify="center")
+        table.add_column("Details")
         
-        # Check Unbound status
+        # Unbound status
         unbound_status = check_service_status("unbound")
-        unbound_status_str = "[green]● Running[/green]" if unbound_status else "[red]○ Stopped[/red]"
-        table.add_row("Unbound DNS", unbound_status_str)
+        if unbound_status:
+            unbound_display = "[green]● Running[/green]"
+            unbound_details = self._get_service_uptime("unbound")
+        else:
+            unbound_display = "[red]○ Stopped[/red]"
+            unbound_details = "Service not running"
+        table.add_row("Unbound DNS", unbound_display, unbound_details)
         
-        # Check Redis status
+        # Redis status
         redis_status = check_service_status("redis-server")
-        redis_status_str = "[green]● Running[/green]" if redis_status else "[red]○ Stopped[/red]"
-        table.add_row("Redis Cache", redis_status_str)
+        if redis_status:
+            redis_display = "[green]● Running[/green]"
+            redis_details = self._get_service_uptime("redis-server")
+        else:
+            redis_display = "[red]○ Stopped[/red]"
+            redis_details = "Service not running"
+        table.add_row("Redis Cache", redis_display, redis_details)
         
         console.print(table)
-        console.print()
+        
+        # Show statistics if services are running
+        if unbound_status:
+            console.print("\n[cyan]DNS Statistics:[/cyan]")
+            self._show_quick_stats()
+        
+        if redis_status:
+            console.print("\n[cyan]Cache Statistics:[/cyan]")
+            self._show_cache_stats()
+        
+        console.print("\n[dim]Press Enter to continue...[/dim]")
+        input()
     
-    def show_menu(self) -> Optional[str]:
-        """Display the main menu and get user choice."""
-        # Installation & Setup section
-        console.print(Panel.fit(
-            "[bold white]INSTALLATION & SETUP[/bold white]\n\n"
-            "[green]1[/green]. Install Unbound (Fresh Installation)\n"
-            "[green]2[/green]. Fix Existing Installation\n"
-            "[green]3[/green]. Update Unbound Version",
-            border_style="blue"
-        ))
-        
-        # Configuration section
-        console.print(Panel.fit(
-            "[bold white]CONFIGURATION[/bold white]\n\n"
-            "[green]4[/green]. Manage Configuration\n"
-            "[green]5[/green]. Configure Redis Integration\n"
-            "[green]6[/green]. DNSSEC Management",
-            border_style="blue"
-        ))
-        
-        # Maintenance section
-        console.print(Panel.fit(
-            "[bold white]MAINTENANCE[/bold white]\n\n"
-            "[green]7[/green]. Backup Configuration\n"
-            "[green]8[/green]. Restore Configuration\n"
-            "[green]9[/green]. Regenerate Control Keys",
-            border_style="blue"
-        ))
-        
-        # Troubleshooting section
-        console.print(Panel.fit(
-            "[bold white]TROUBLESHOOTING[/bold white]\n\n"
-            "[green]10[/green]. Troubleshoot Installation\n"
-            "[green]11[/green]. Test Unbound Functionality\n"
-            "[green]12[/green]. View Logs",
-            border_style="blue"
-        ))
-        
-        # System section
-        console.print(Panel.fit(
-            "[bold white]SYSTEM[/bold white]\n\n"
-            "[green]13[/green]. Start/Stop Services\n"
-            "[green]14[/green]. View Statistics",
-            border_style="blue"
-        ))
-        
-        # Manager Tools section
-        console.print(Panel.fit(
-            "[bold white]MANAGER TOOLS[/bold white]\n\n"
-            "[green]15[/green]. Update Unbound Manager\n"
-            "[green]16[/green]. Uninstall Unbound Manager\n"
-            "[green]0[/green]. Exit",
-            border_style="blue"
-        ))
-        
-        console.print()
-        choice = Prompt.ask(
-            "[yellow]Please select an option[/yellow]",
-            choices=[str(i) for i in range(17)],
-            default="0"
-        )
-        
-        return choice
-    
-    def uninstall_manager(self) -> None:
-        """Uninstall Unbound Manager."""
-        console.print(Panel.fit(
-            "[bold red]Uninstall Unbound Manager[/bold red]\n\n"
-            "This will remove the Unbound Manager Python package.\n"
-            "Your Unbound DNS configuration will NOT be removed.",
-            border_style="red"
-        ))
-        
-        if not prompt_yes_no("Do you want to uninstall Unbound Manager?", default=False):
-            console.print("[yellow]Uninstall cancelled[/yellow]")
-            return
-        
-        # Create configuration backup first
-        console.print("[cyan]Creating backup of configuration...[/cyan]")
-        from .backup import BackupManager
-        backup_manager = BackupManager()
-        backup_path = backup_manager.create_backup("before_uninstall")
-        console.print(f"[green]✓[/green] Configuration backed up to: {backup_path}")
-        
-        # Ask about removing Unbound itself
-        remove_unbound = prompt_yes_no(
-            "\n[yellow]Also remove Unbound DNS server?[/yellow]\n"
-            "[red]WARNING: This will remove your DNS server![/red]",
-            default=False
-        )
-        
-        if remove_unbound:
-            console.print("[yellow]Stopping Unbound service...[/yellow]")
-            run_command(["systemctl", "stop", "unbound"], check=False)
-            run_command(["systemctl", "disable", "unbound"], check=False)
-            
-            # Remove Unbound files
-            console.print("[yellow]Removing Unbound...[/yellow]")
-            files_to_remove = [
-                "/usr/sbin/unbound",
-                "/usr/sbin/unbound-anchor",
-                "/usr/sbin/unbound-checkconf",
-                "/usr/sbin/unbound-control",
-                "/usr/sbin/unbound-control-setup",
-                "/usr/sbin/unbound-host",
-                "/etc/systemd/system/unbound.service",
-            ]
-            
-            for file_path in files_to_remove:
-                if Path(file_path).exists():
-                    Path(file_path).unlink()
-            
-            run_command(["systemctl", "daemon-reload"], check=False)
-            console.print("[green]✓[/green] Unbound removed")
-        
-        # Ask about removing Redis
-        remove_redis = prompt_yes_no(
-            "\n[yellow]Also remove Redis server?[/yellow]\n"
-            "[cyan]Redis was installed for caching support[/cyan]",
-            default=False
-        )
-        
-        if remove_redis:
-            console.print("[yellow]Stopping Redis service...[/yellow]")
-            run_command(["systemctl", "stop", "redis-server"], check=False)
-            run_command(["systemctl", "disable", "redis-server"], check=False)
-            
-            console.print("[yellow]Removing Redis packages...[/yellow]")
-            run_command(["apt-get", "remove", "-y", "redis-server", "redis-tools"], check=False)
-            run_command(["apt-get", "autoremove", "-y"], check=False)
-            
-            # Remove Redis directories
-            for redis_dir in ["/etc/redis", "/var/lib/redis", "/var/log/redis", "/var/run/redis"]:
-                if Path(redis_dir).exists():
-                    import shutil
-                    shutil.rmtree(redis_dir, ignore_errors=True)
-            
-            console.print("[green]✓[/green] Redis removed")
-        
-        # Ask about removing build dependencies
-        remove_deps = prompt_yes_no(
-            "\n[yellow]Remove build dependencies?[/yellow]\n"
-            "[cyan]These include: build-essential, libssl-dev, etc.[/cyan]\n"
-            "[red]WARNING: Other applications may depend on these![/red]",
-            default=False
-        )
-        
-        if remove_deps:
-            console.print("[yellow]Removing development packages...[/yellow]")
-            deps = [
-                "build-essential", "libssl-dev", "libexpat1-dev",
-                "libevent-dev", "libhiredis-dev", "libnghttp2-dev",
-                "libsystemd-dev", "swig", "protobuf-c-compiler",
-                "libprotobuf-c-dev"
-            ]
-            for dep in deps:
-                run_command(["apt-get", "remove", "-y", dep], check=False)
-            run_command(["apt-get", "autoremove", "-y"], check=False)
-            console.print("[green]✓[/green] Development packages removed")
-        
-        # Ask about Python dependencies
-        remove_python_deps = prompt_yes_no(
-            "\n[yellow]Remove Python dependencies?[/yellow]\n"
-            "[cyan]These include: rich, jinja2, pyyaml, dnspython, etc.[/cyan]\n"
-            "[red]WARNING: Other Python applications may use these![/red]",
-            default=False
-        )
-        
-        if remove_python_deps:
-            console.print("[yellow]Removing Python packages...[/yellow]")
-            python_deps = ["rich", "typer", "jinja2", "pyyaml", "requests", "dnspython", "redis", "psutil"]
-            for dep in python_deps:
-                run_command(["pip3", "uninstall", "-y", dep], check=False)
-            console.print("[green]✓[/green] Python dependencies removed")
-        
-        # Uninstall Python package
-        console.print("[yellow]Removing Unbound Manager Python package...[/yellow]")
+    def _get_service_uptime(self, service: str) -> str:
+        """Get service uptime."""
         try:
-            run_command(["pip3", "uninstall", "-y", "unbound-manager"], check=False)
-            console.print("[green]✓[/green] Unbound Manager package removed")
-        except Exception as e:
-            console.print(f"[yellow]Could not uninstall package: {e}[/yellow]")
-        
-        # Remove command from /usr/local/bin if it exists
-        manager_cmd = Path("/usr/local/bin/unbound-manager")
-        if manager_cmd.exists():
-            manager_cmd.unlink()
-            console.print("[green]✓[/green] Removed /usr/local/bin/unbound-manager")
-        
+            result = run_command(
+                ["systemctl", "show", service, "--property=ActiveEnterTimestamp"],
+                check=False
+            )
+            if result.returncode == 0 and "=" in result.stdout:
+                timestamp = result.stdout.split("=")[1].strip()
+                if timestamp:
+                    # Parse and calculate uptime
+                    import datetime
+                    start_time = datetime.datetime.strptime(
+                        timestamp.split()[1] + " " + timestamp.split()[2],
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                    uptime = datetime.datetime.now() - start_time
+                    days = uptime.days
+                    hours = uptime.seconds // 3600
+                    minutes = (uptime.seconds % 3600) // 60
+                    
+                    if days > 0:
+                        return f"Up {days}d {hours}h {minutes}m"
+                    elif hours > 0:
+                        return f"Up {hours}h {minutes}m"
+                    else:
+                        return f"Up {minutes}m"
+        except Exception:
+            pass
+        return "Unknown"
+    
+    def _show_quick_stats(self) -> None:
+        """Show quick DNS statistics."""
+        try:
+            result = run_command(["unbound-control", "stats"], check=False)
+            if result.returncode == 0:
+                stats = {}
+                for line in result.stdout.split('\n'):
+                    if '=' in line:
+                        key, value = line.split('=', 1)
+                        stats[key] = value.strip()
+                
+                queries = stats.get("total.num.queries", "0")
+                cache_hits = stats.get("total.num.cachehits", "0")
+                
+                # Calculate hit rate
+                if int(queries) > 0:
+                    hit_rate = (int(cache_hits) / int(queries)) * 100
+                    console.print(f"  Total queries: {queries}")
+                    console.print(f"  Cache hits: {cache_hits}")
+                    console.print(f"  Hit rate: [green]{hit_rate:.1f}%[/green]")
+                else:
+                    console.print("  No queries yet")
+        except Exception:
+            console.print("  [yellow]Statistics unavailable[/yellow]")
+    
+    def _show_cache_stats(self) -> None:
+        """Show quick cache statistics."""
+        try:
+            result = run_command(
+                ["redis-cli", "-s", "/var/run/redis/redis.sock", "info", "stats"],
+                check=False
+            )
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    if 'keyspace_hits:' in line:
+                        hits = line.split(':')[1].strip()
+                        console.print(f"  Keyspace hits: {hits}")
+                    elif 'keyspace_misses:' in line:
+                        misses = line.split(':')[1].strip()
+                        console.print(f"  Keyspace misses: {misses}")
+        except Exception:
+            console.print("  [yellow]Cache statistics unavailable[/yellow]")
+    
+    def manage_services_quick(self) -> None:
+        """Quick service management."""
+        console.clear()
         console.print(Panel.fit(
-            "[bold green]Uninstall Complete![/bold green]\n\n"
-            f"Configuration backup saved to: {backup_path}\n"
-            "Source directory preserved at: ~/unbound-manager\n\n"
-            "To remove source directory:\n"
-            "  rm -rf ~/unbound-manager",
-            border_style="green"
+            "[bold cyan]Service Management[/bold cyan]",
+            border_style="cyan"
         ))
         
-        console.print("\n[yellow]Exiting...[/yellow]")
-        sys.exit(0)
+        # Show current status
+        unbound_running = check_service_status("unbound")
+        redis_running = check_service_status("redis-server")
+        
+        console.print("Current Status:")
+        console.print(f"  Unbound: {'[green]Running[/green]' if unbound_running else '[red]Stopped[/red]'}")
+        console.print(f"  Redis: {'[green]Running[/green]' if redis_running else '[red]Stopped[/red]'}")
+        console.print()
+        
+        # Quick actions based on status
+        if not unbound_running:
+            console.print("[green]1[/green]. Start All Services")
+        else:
+            console.print("[green]1[/green]. Restart All Services")
+        
+        console.print("[green]2[/green]. Stop All Services")
+        console.print("[green]3[/green]. Advanced Service Control")
+        console.print("[green]0[/green]. Back")
+        
+        choice = Prompt.ask("Select action", choices=["0", "1", "2", "3"], default="0")
+        
+        if choice == "1":
+            console.print("[cyan]Starting services...[/cyan]")
+            restart_service("redis-server")
+            restart_service("unbound")
+            console.print("[green]✓[/green] Services started")
+            time.sleep(2)
+        elif choice == "2":
+            console.print("[cyan]Stopping services...[/cyan]")
+            run_command(["systemctl", "stop", "unbound"])
+            run_command(["systemctl", "stop", "redis-server"])
+            console.print("[yellow]Services stopped[/yellow]")
+            time.sleep(2)
+        elif choice == "3":
+            self.manage_services_advanced()
+    
+    def manage_services_advanced(self) -> None:
+        """Advanced service management."""
+        from .utils import restart_service
+        
+        console.clear()
+        console.print(Panel.fit(
+            "[bold]Advanced Service Control[/bold]",
+            border_style="cyan"
+        ))
+        
+        console.print("[green]1[/green]. Start Unbound")
+        console.print("[green]2[/green]. Stop Unbound")
+        console.print("[green]3[/green]. Restart Unbound")
+        console.print("[green]4[/green]. Start Redis")
+        console.print("[green]5[/green]. Stop Redis")
+        console.print("[green]6[/green]. Restart Redis")
+        console.print("[green]0[/green]. Back")
+        
+        choice = Prompt.ask("Select action", choices=["0", "1", "2", "3", "4", "5", "6"])
+        
+        actions = {
+            "1": lambda: restart_service("unbound"),
+            "2": lambda: run_command(["systemctl", "stop", "unbound"]),
+            "3": lambda: restart_service("unbound"),
+            "4": lambda: restart_service("redis-server"),
+            "5": lambda: run_command(["systemctl", "stop", "redis-server"]),
+            "6": lambda: restart_service("redis-server"),
+        }
+        
+        if choice != "0":
+            actions[choice]()
+            console.print("[green]✓[/green] Action completed")
+            time.sleep(2)
+    
+    def backup_configuration_interactive(self) -> None:
+        """Interactive backup creation."""
+        console.clear()
+        console.print(Panel.fit(
+            "[bold cyan]Create Backup[/bold cyan]",
+            border_style="cyan"
+        ))
+        
+        description = Prompt.ask(
+            "[cyan]Enter backup description (optional)[/cyan]",
+            default=""
+        )
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+        ) as progress:
+            task = progress.add_task("Creating backup...", total=None)
+            backup_path = self.backup_manager.create_backup(description)
+            progress.update(task, completed=True)
+        
+        console.print(f"[green]✓[/green] Backup created: {backup_path.name}")
+        console.print("\n[dim]Press Enter to continue...[/dim]")
+        input()
+    
+    def view_logs_interactive(self) -> None:
+        """Interactive log viewer."""
+        console.clear()
+        console.print(Panel.fit(
+            "[bold cyan]View Logs[/bold cyan]",
+            border_style="cyan"
+        ))
+        
+        console.print("[green]1[/green]. Last 50 lines")
+        console.print("[green]2[/green]. Last 100 lines")
+        console.print("[green]3[/green]. Last 200 lines")
+        console.print("[green]4[/green]. Follow logs (real-time)")
+        console.print("[green]0[/green]. Back")
+        
+        choice = Prompt.ask("Select option", choices=["0", "1", "2", "3", "4"])
+        
+        if choice == "1":
+            self.troubleshooter.view_logs(50)
+        elif choice == "2":
+            self.troubleshooter.view_logs(100)
+        elif choice == "3":
+            self.troubleshooter.view_logs(200)
+        elif choice == "4":
+            console.print("[cyan]Following logs... Press Ctrl+C to stop[/cyan]\n")
+            try:
+                run_command(["journalctl", "-u", "unbound", "-f"])
+            except KeyboardInterrupt:
+                pass
+        
+        if choice != "0":
+            console.print("\n[dim]Press Enter to continue...[/dim]")
+            input()
+    
+    def installation_menu(self) -> None:
+        """Installation submenu."""
+        console.clear()
+        console.print(Panel.fit(
+            "[bold cyan]Installation Options[/bold cyan]",
+            border_style="cyan"
+        ))
+        
+        console.print("[green]1[/green]. Fresh Installation")
+        console.print("[green]2[/green]. Fix Existing Installation")
+        console.print("[green]3[/green]. Reinstall Unbound")
+        console.print("[green]0[/green]. Back")
+        
+        choice = Prompt.ask("Select option", choices=["0", "1", "2", "3"])
+        
+        if choice == "1":
+            self.installer.install_unbound()
+        elif choice == "2":
+            self.installer.fix_existing_installation()
+        elif choice == "3":
+            if prompt_yes_no("This will reinstall Unbound. Continue?", default=False):
+                self.installer.install_unbound()
+    
+    def show_help(self) -> None:
+        """Show help information."""
+        console.clear()
+        console.print(Panel.fit(
+            "[bold cyan]Unbound Manager Help[/bold cyan]",
+            border_style="cyan"
+        ))
+        
+        help_text = """
+[bold]Navigation:[/bold]
+  ↑/↓ or j/k  : Navigate menu
+  Enter       : Select item
+  Esc or b    : Go back
+  h           : Show this help
+  q           : Exit program
+
+[bold]Quick Keys:[/bold]
+  1-9         : Quick select menu item
+  /           : Search (if available)
+
+[bold]Common Tasks:[/bold]
+  • Start Services: Quick way to get Unbound running
+  • View Status: Check if everything is working
+  • View Logs: See what's happening
+  • Edit Configuration: Modify DNS settings
+  • Run Diagnostics: Check for problems
+
+[bold]First Time Setup:[/bold]
+  1. Run 'Installation Options' → 'Fresh Installation'
+  2. Configure your settings in 'Configuration'
+  3. Start services from main menu
+
+[bold]Documentation:[/bold]
+  GitHub: https://github.com/regix1/unbound-manager
+  
+[bold]Support:[/bold]
+  Report issues on GitHub
+        """
+        console.print(help_text)
+        console.print("\n[dim]Press Enter to continue...[/dim]")
+        input()
     
     def update_manager(self) -> None:
         """Update Unbound Manager to the latest version."""
+        console.clear()
         console.print(Panel.fit(
-            "[bold cyan]Update Unbound Manager[/bold cyan]\n\n"
-            "This will update the Unbound Manager to the latest version.",
+            "[bold cyan]Update Unbound Manager[/bold cyan]",
             border_style="cyan"
         ))
         
-        # Check current version
         console.print(f"[cyan]Current version:[/cyan] {APP_VERSION}")
         
-        # Check for updates first
-        self.check_for_updates()
-        
-        # Ask if user wants to proceed with update
-        if prompt_yes_no("\nProceed with update?", default=True):
-            self.perform_update()
-    
-    def check_for_updates(self) -> None:
-        """Check for updates from GitHub."""
-        console.print(Panel.fit(
-            "[bold cyan]Update Manager[/bold cyan]",
-            border_style="cyan"
-        ))
-        
-        # Check current local version
-        current_version = APP_VERSION
-        console.print(f"[cyan]Current version:[/cyan] {current_version}")
-        
-        # Check remote VERSION file on GitHub
+        # Check for updates
         console.print("[yellow]Checking for updates...[/yellow]")
         
         try:
             import requests
-            
-            # Try to get VERSION from main branch
             response = requests.get(
                 "https://raw.githubusercontent.com/regix1/unbound-manager/main/VERSION",
                 timeout=5
@@ -328,434 +552,92 @@ class UnboundManagerCLI:
                 remote_version = response.text.strip()
                 console.print(f"[cyan]Latest version:[/cyan] {remote_version}")
                 
-                if remote_version != current_version:
+                if remote_version != APP_VERSION:
                     console.print("\n[yellow]⚠ An update is available![/yellow]")
-                    console.print(f"[yellow]Update from {current_version} → {remote_version}[/yellow]")
-                    
-                    if prompt_yes_no("\nWould you like to update now?"):
+                    if prompt_yes_no("\nUpdate now?", default=True):
                         self.perform_update()
                 else:
                     console.print("\n[green]✓ You are running the latest version[/green]")
-                    
-                    # Check if there are uncommitted changes in git
-                    if prompt_yes_no("\nCheck for git updates anyway?", default=False):
-                        self.check_git_updates()
-                        
-            elif response.status_code == 404:
-                # Try master branch if main doesn't exist
-                response = requests.get(
-                    "https://raw.githubusercontent.com/regix1/unbound-manager/master/VERSION",
-                    timeout=5
-                )
-                
-                if response.status_code == 200:
-                    remote_version = response.text.strip()
-                    console.print(f"[cyan]Latest version:[/cyan] {remote_version}")
-                    
-                    if remote_version != current_version:
-                        console.print("\n[yellow]⚠ An update is available![/yellow]")
-                        console.print(f"[yellow]Update from {current_version} → {remote_version}[/yellow]")
-                        
-                        if prompt_yes_no("\nWould you like to update now?"):
-                            self.perform_update()
-                    else:
-                        console.print("\n[green]✓ You are running the latest version[/green]")
-                        
-                        if prompt_yes_no("\nCheck for git updates anyway?", default=False):
-                            self.check_git_updates()
-                else:
-                    console.print("[yellow]Could not fetch VERSION from GitHub[/yellow]")
-                    self.check_git_updates()
-                    
-        except requests.exceptions.RequestException as e:
-            console.print(f"[yellow]Could not connect to GitHub: {e}[/yellow]")
-            self.check_git_updates()
-            
-        except ImportError:
-            console.print("[yellow]requests library not installed, using git method[/yellow]")
-            self.check_git_updates()
-    
-    def check_git_updates(self) -> None:
-        """Check for updates using git."""
-        try:
-            project_dir = Path(__file__).parent.parent
-            
-            # Fetch latest changes
-            console.print("[cyan]Fetching latest changes from git...[/cyan]")
-            result = run_command(
-                ["git", "fetch"],
-                cwd=project_dir,
-                check=False
-            )
-            
-            # Check if we're behind
-            result = run_command(
-                ["git", "status", "-uno"],
-                cwd=project_dir,
-                check=False
-            )
-            
-            if "Your branch is behind" in result.stdout:
-                console.print("\n[yellow]⚠ Updates are available![/yellow]")
-                if prompt_yes_no("Would you like to update now?"):
-                    self.perform_update()
-            elif "Your branch is up to date" in result.stdout:
-                console.print("\n[green]✓ You are running the latest version[/green]")
             else:
-                console.print("\n[cyan]Repository status:[/cyan]")
-                console.print(result.stdout)
+                console.print("[yellow]Could not check for updates[/yellow]")
                 
         except Exception as e:
-            console.print(f"[yellow]Could not check git status: {e}[/yellow]")
+            console.print(f"[yellow]Could not check for updates: {e}[/yellow]")
+        
+        console.print("\n[dim]Press Enter to continue...[/dim]")
+        input()
     
     def perform_update(self) -> None:
-        """Perform auto-update for both development and global installs."""
-        console.print("\n[cyan]Starting update process...[/cyan]")
+        """Perform the update."""
+        console.print("\n[cyan]Updating Unbound Manager...[/cyan]")
         
         try:
-            import site
-            import tempfile
-            import shutil
+            # Find the source directory
+            source_dir = Path.home() / "unbound-manager"
             
-            # Check if this is a development or global install
-            current_file = Path(__file__).resolve()
-            site_packages_paths = site.getsitepackages() + [site.getusersitepackages()]
-            is_global_install = any(str(current_file).startswith(str(Path(p).resolve())) 
-                                for p in site_packages_paths if p)
-            
-            if is_global_install:
-                console.print("[yellow]Detected global installation.[/yellow]")
+            if source_dir.exists() and (source_dir / ".git").exists():
+                # Git pull
+                console.print("[cyan]Pulling latest changes...[/cyan]")
+                run_command(["git", "pull"], cwd=source_dir)
                 
-                # Check if source directory exists
-                source_dir = Path.home() / "unbound-manager"
+                # Reinstall
+                console.print("[cyan]Reinstalling package...[/cyan]")
+                run_command(["pip3", "install", "-e", "."], cwd=source_dir)
                 
-                if source_dir.exists() and (source_dir / ".git").exists():
-                    # Update from existing source
-                    console.print(f"[cyan]Found source directory at {source_dir}[/cyan]")
-                    console.print("[cyan]Updating source code...[/cyan]")
-                    
-                    # Pull latest changes
-                    run_command(["git", "fetch", "origin"], cwd=source_dir, check=False)
-                    
-                    # Determine branch
-                    result = run_command(["git", "branch", "-r"], cwd=source_dir, check=False)
-                    branch = "main" if "origin/main" in result.stdout else "master"
-                    
-                    # Reset to latest
-                    run_command(["git", "reset", "--hard", f"origin/{branch}"], cwd=source_dir, check=False)
-                    
-                    console.print("[cyan]Reinstalling from updated source...[/cyan]")
-                    result = run_command(["pip3", "install", ".", "--upgrade"], cwd=source_dir, check=False)
-                    
-                    if result.returncode == 0:
-                        version_file = source_dir / "VERSION"
-                        if version_file.exists():
-                            new_version = version_file.read_text().strip()
-                            console.print(f"[green]✓ Updated to version {new_version}![/green]")
-                        console.print("[yellow]Restart unbound-manager to use the new version[/yellow]")
-                        
-                        if prompt_yes_no("Restart now?"):
-                            import os
-                            import sys
-                            os.execv(sys.executable, [sys.executable] + sys.argv)
-                    else:
-                        console.print("[red]Update failed[/red]")
-                        
-                else:
-                    # No source directory, download fresh
-                    console.print("[cyan]Source directory not found. Downloading fresh copy...[/cyan]")
-                    
-                    with tempfile.TemporaryDirectory() as tmpdir:
-                        tmp_path = Path(tmpdir)
-                        
-                        # Clone repository
-                        console.print("[cyan]Cloning repository...[/cyan]")
-                        result = run_command(
-                            ["git", "clone", "https://github.com/regix1/unbound-manager.git"],
-                            cwd=tmp_path,
-                            check=False
-                        )
-                        
-                        if result.returncode != 0:
-                            console.print("[red]Could not clone repository[/red]")
-                            return
-                        
-                        clone_dir = tmp_path / "unbound-manager"
-                        
-                        # Save to home directory for future updates
-                        if not source_dir.exists():
-                            console.print(f"[cyan]Saving source to {source_dir} for future updates...[/cyan]")
-                            shutil.copytree(clone_dir, source_dir)
-                        
-                        # Install update
-                        console.print("[cyan]Installing update...[/cyan]")
-                        result = run_command(
-                            ["pip3", "install", ".", "--upgrade"],
-                            cwd=clone_dir,
-                            check=False
-                        )
-                        
-                        if result.returncode == 0:
-                            version_file = clone_dir / "VERSION"
-                            if version_file.exists():
-                                new_version = version_file.read_text().strip()
-                                console.print(f"[green]✓ Updated to version {new_version}![/green]")
-                            console.print("[yellow]Restart unbound-manager to use the new version[/yellow]")
-                            
-                            if prompt_yes_no("Restart now?"):
-                                import os
-                                import sys
-                                os.execv(sys.executable, [sys.executable] + sys.argv)
-                        else:
-                            console.print("[red]Installation failed[/red]")
-            
+                console.print("[green]✓ Update complete! Please restart the program.[/green]")
             else:
-                # Development install - use existing git-based update
-                project_dir = Path(__file__).parent.parent
+                console.print("[yellow]Source directory not found. Please update manually.[/yellow]")
                 
-                if not (project_dir / ".git").exists():
-                    console.print("[red]Git repository not found[/red]")
-                    console.print("[yellow]Reinstall with:[/yellow]")
-                    console.print("  cd ~")
-                    console.print("  git clone https://github.com/regix1/unbound-manager.git")
-                    console.print("  cd unbound-manager")
-                    console.print("  pip3 install -e .")
-                    return
-                
-                console.print("[cyan]Fetching latest changes...[/cyan]")
-                
-                # Fetch updates
-                run_command(["git", "fetch", "origin"], cwd=project_dir, check=False)
-                
-                # Determine branch
-                result = run_command(["git", "branch", "-r"], cwd=project_dir, check=False)
-                branch = "main" if "origin/main" in result.stdout else "master"
-                
-                # Check if up to date
-                result = run_command(
-                    ["git", "rev-list", f"HEAD...origin/{branch}", "--count"],
-                    cwd=project_dir,
-                    check=False
-                )
-                
-                if result.returncode == 0 and result.stdout.strip() == "0":
-                    console.print("[green]Already up to date![/green]")
-                    return
-                
-                # Update
-                console.print(f"[cyan]Updating from {branch}...[/cyan]")
-                run_command(["git", "stash"], cwd=project_dir, check=False)
-                run_command(["git", "reset", "--hard", f"origin/{branch}"], cwd=project_dir, check=False)
-                
-                console.print("[cyan]Updating Python package...[/cyan]")
-                result = run_command(["pip3", "install", "-e", "."], cwd=project_dir, check=False)
-                
-                if result.returncode == 0:
-                    version_file = project_dir / "VERSION"
-                    if version_file.exists():
-                        new_version = version_file.read_text().strip()
-                        console.print(f"[green]✓ Updated to version {new_version}![/green]")
-                    console.print("[yellow]Restart unbound-manager to use the new version[/yellow]")
-                    
-                    if prompt_yes_no("Restart now?"):
-                        import os
-                        import sys
-                        os.execv(sys.executable, [sys.executable] + sys.argv)
-                        
         except Exception as e:
-            console.print(f"[red]Update error: {e}[/red]")
+            console.print(f"[red]Update failed: {e}[/red]")
     
-    def handle_choice(self, choice: str) -> bool:
-        """
-        Handle menu choice.
-        
-        Returns:
-            bool: True to continue, False to exit
-        """
+    def uninstall_manager(self) -> None:
+        """Uninstall Unbound Manager."""
         console.clear()
-        
-        try:
-            if choice == "0":
-                console.print("[cyan]Thank you for using Unbound Manager![/cyan]")
-                return False
-            
-            elif choice == "1":
-                # Fresh installation
-                self.installer.install_unbound()
-            
-            elif choice == "2":
-                # Fix existing installation
-                self.installer.fix_existing_installation()
-            
-            elif choice == "3":
-                # Update Unbound
-                self.installer.update_unbound()
-            
-            elif choice == "4":
-                # Manage configuration
-                self.config_manager.manage_configuration()
-            
-            elif choice == "5":
-                # Configure Redis
-                self.redis_manager.configure_redis()
-            
-            elif choice == "6":
-                # DNSSEC Management
-                self.dnssec_manager.manage_dnssec()
-            
-            elif choice == "7":
-                # Backup configuration
-                description = Prompt.ask(
-                    "[cyan]Enter backup description (optional)[/cyan]",
-                    default=""
-                )
-                self.backup_manager.create_backup(description)
-            
-            elif choice == "8":
-                # Restore configuration
-                self.backup_manager.restore_backup()
-            
-            elif choice == "9":
-                # Regenerate control keys
-                self.dnssec_manager.generate_control_keys()
-            
-            elif choice == "10":
-                # Troubleshoot
-                self.troubleshooter.run_diagnostics()
-            
-            elif choice == "11":
-                # Test functionality
-                self.tester.run_all_tests()
-            
-            elif choice == "12":
-                # View logs
-                lines = IntPrompt.ask(
-                    "[cyan]Number of log lines to show[/cyan]",
-                    default=50
-                )
-                self.troubleshooter.view_logs(lines)
-            
-            elif choice == "13":
-                # Start/Stop services
-                self.manage_services()
-            
-            elif choice == "14":
-                # View statistics
-                self.troubleshooter.show_statistics()
-            
-            elif choice == "15":
-                # Update Unbound Manager
-                self.update_manager()
-            
-            elif choice == "16":
-                # Uninstall Unbound Manager
-                self.uninstall_manager()
-            
-            else:
-                console.print("[red]Invalid option selected[/red]")
-        
-        except KeyboardInterrupt:
-            console.print("\n[yellow]Operation cancelled by user[/yellow]")
-        except Exception as e:
-            console.print(f"[red]An error occurred: {e}[/red]")
-            import traceback
-            if "--debug" in sys.argv:
-                console.print("[dim]" + traceback.format_exc() + "[/dim]")
-        
-        console.print("\n[cyan]Press Enter to continue...[/cyan]")
-        input()
-        return True
-    
-    def manage_services(self) -> None:
-        """Manage Unbound and Redis services."""
-        from .utils import restart_service
-        
         console.print(Panel.fit(
-            "[bold]Service Management[/bold]\n\n"
-            "[green]1[/green]. Start Unbound\n"
-            "[green]2[/green]. Stop Unbound\n"
-            "[green]3[/green]. Restart Unbound\n"
-            "[green]4[/green]. Start Redis\n"
-            "[green]5[/green]. Stop Redis\n"
-            "[green]6[/green]. Restart Redis\n"
-            "[green]7[/green]. Restart All Services\n"
-            "[green]8[/green]. View Service Status\n"
-            "[green]0[/green]. Back",
-            border_style="cyan"
+            "[bold red]Uninstall Unbound Manager[/bold red]\n\n"
+            "This will remove the Unbound Manager tool.\n"
+            "Your DNS configuration will be preserved.",
+            border_style="red"
         ))
         
-        choice = Prompt.ask("Select action", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8"])
+        if not prompt_yes_no("Are you sure you want to uninstall?", default=False):
+            return
         
-        if choice == "1":
-            if restart_service("unbound"):
-                console.print("[green]✓ Unbound service started[/green]")
-            else:
-                console.print("[red]✗ Failed to start Unbound[/red]")
-        elif choice == "2":
-            run_command(["systemctl", "stop", "unbound"])
-            console.print("[yellow]Unbound service stopped[/yellow]")
-        elif choice == "3":
-            if restart_service("unbound"):
-                console.print("[green]✓ Unbound service restarted[/green]")
-            else:
-                console.print("[red]✗ Failed to restart Unbound[/red]")
-        elif choice == "4":
-            if restart_service("redis-server"):
-                console.print("[green]✓ Redis service started[/green]")
-            else:
-                console.print("[red]✗ Failed to start Redis[/red]")
-        elif choice == "5":
-            run_command(["systemctl", "stop", "redis-server"])
-            console.print("[yellow]Redis service stopped[/yellow]")
-        elif choice == "6":
-            if restart_service("redis-server"):
-                console.print("[green]✓ Redis service restarted[/green]")
-            else:
-                console.print("[red]✗ Failed to restart Redis[/red]")
-        elif choice == "7":
-            redis_ok = restart_service("redis-server")
-            unbound_ok = restart_service("unbound")
-            if redis_ok and unbound_ok:
-                console.print("[green]✓ All services restarted successfully[/green]")
-            else:
-                console.print("[yellow]⚠ Some services failed to restart[/yellow]")
-        elif choice == "8":
-            # Show detailed status
-            console.print("\n[cyan]Service Status Details:[/cyan]\n")
-            
-            for service in ["unbound", "redis-server"]:
-                result = run_command(
-                    ["systemctl", "status", service, "--no-pager"],
-                    check=False
-                )
-                console.print(f"[bold]{service}:[/bold]")
-                console.print(result.stdout[:500])  # First 500 chars
-                console.print()
+        # Backup configuration first
+        console.print("[cyan]Creating backup...[/cyan]")
+        backup_path = self.backup_manager.create_backup("before_uninstall")
+        console.print(f"[green]✓[/green] Backup saved to: {backup_path}")
+        
+        # Uninstall
+        console.print("[yellow]Uninstalling Unbound Manager...[/yellow]")
+        try:
+            run_command(["pip3", "uninstall", "-y", "unbound-manager"])
+            console.print("[green]✓ Unbound Manager uninstalled[/green]")
+        except Exception as e:
+            console.print(f"[red]Uninstall failed: {e}[/red]")
+        
+        console.print("\n[yellow]Exiting...[/yellow]")
+        sys.exit(0)
     
     def run(self) -> None:
         """Run the main application loop."""
         check_root()
         
-        # Check for updates on startup (optional)
-        if "--no-update-check" not in sys.argv:
-            try:
-                import requests
-                # Quick update check without blocking
-                console.print("[dim]Checking for updates...[/dim]", end="\r")
-                # This is done silently in background
-            except ImportError:
-                pass  # requests not installed, skip update check
-        
         while True:
             self.show_banner()
-            self.show_status()
             
-            choice = self.show_menu()
-            if choice is None:
+            # Run the interactive menu
+            result = self.menu.run()
+            
+            # Check if we should exit
+            if result is False:
+                console.print("\n[cyan]Thank you for using Unbound Manager![/cyan]")
                 break
             
-            if not self.handle_choice(choice):
-                break
+            # Handle other results
+            if result is None:
+                continue
 
 
 def main():

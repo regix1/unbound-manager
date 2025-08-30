@@ -147,6 +147,30 @@
         "documentation": {}
     },
     {
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Tuple",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Callable",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
         "label": "Dict",
         "importPath": "typing",
         "description": "typing",
@@ -211,6 +235,38 @@
         "documentation": {}
     },
     {
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Optional",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Callable",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Any",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
         "label": "Optional",
         "importPath": "typing",
         "description": "typing",
@@ -376,6 +432,22 @@
         "description": "rich.console",
         "isExtraImport": true,
         "detail": "rich.console",
+        "documentation": {}
+    },
+    {
+        "label": "Console",
+        "importPath": "rich.console",
+        "description": "rich.console",
+        "isExtraImport": true,
+        "detail": "rich.console",
+        "documentation": {}
+    },
+    {
+        "label": "Panel",
+        "importPath": "rich.panel",
+        "description": "rich.panel",
+        "isExtraImport": true,
+        "detail": "rich.panel",
         "documentation": {}
     },
     {
@@ -631,6 +703,14 @@
         "documentation": {}
     },
     {
+        "label": "Text",
+        "importPath": "rich.text",
+        "description": "rich.text",
+        "isExtraImport": true,
+        "detail": "rich.text",
+        "documentation": {}
+    },
+    {
         "label": "Align",
         "importPath": "rich.align",
         "description": "rich.align",
@@ -818,6 +898,32 @@
         "documentation": {}
     },
     {
+        "label": "termios",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "termios",
+        "description": "termios",
+        "detail": "termios",
+        "documentation": {}
+    },
+    {
+        "label": "tty",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "tty",
+        "description": "tty",
+        "detail": "tty",
+        "documentation": {}
+    },
+    {
+        "label": "dataclass",
+        "importPath": "dataclasses",
+        "description": "dataclasses",
+        "isExtraImport": true,
+        "detail": "dataclasses",
+        "documentation": {}
+    },
+    {
         "label": "statistics",
         "kind": 6,
         "isExtraImport": true,
@@ -892,7 +998,7 @@
         "kind": 6,
         "importPath": "unbound_manager.cli",
         "description": "unbound_manager.cli",
-        "peekOfCode": "class UnboundManagerCLI:\n    \"\"\"Main CLI class for Unbound Manager.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the CLI.\"\"\"\n        self.installer = UnboundInstaller()\n        self.config_manager = ConfigManager()\n        self.redis_manager = RedisManager()\n        self.dnssec_manager = DNSSECManager()\n        self.troubleshooter = Troubleshooter()\n        self.tester = UnboundTester()",
+        "peekOfCode": "class UnboundManagerCLI:\n    \"\"\"Main CLI class for Unbound Manager with interactive menu.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the CLI.\"\"\"\n        self.installer = UnboundInstaller()\n        self.config_manager = ConfigManager()\n        self.redis_manager = RedisManager()\n        self.dnssec_manager = DNSSECManager()\n        self.troubleshooter = Troubleshooter()\n        self.tester = UnboundTester()",
         "detail": "unbound_manager.cli",
         "documentation": {}
     },
@@ -910,7 +1016,7 @@
         "kind": 5,
         "importPath": "unbound_manager.cli",
         "description": "unbound_manager.cli",
-        "peekOfCode": "console = Console()\nclass UnboundManagerCLI:\n    \"\"\"Main CLI class for Unbound Manager.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the CLI.\"\"\"\n        self.installer = UnboundInstaller()\n        self.config_manager = ConfigManager()\n        self.redis_manager = RedisManager()\n        self.dnssec_manager = DNSSECManager()\n        self.troubleshooter = Troubleshooter()",
+        "peekOfCode": "console = Console()\nclass UnboundManagerCLI:\n    \"\"\"Main CLI class for Unbound Manager with interactive menu.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the CLI.\"\"\"\n        self.installer = UnboundInstaller()\n        self.config_manager = ConfigManager()\n        self.redis_manager = RedisManager()\n        self.dnssec_manager = DNSSECManager()\n        self.troubleshooter = Troubleshooter()",
         "detail": "unbound_manager.cli",
         "documentation": {}
     },
@@ -1158,6 +1264,51 @@
         "documentation": {}
     },
     {
+        "label": "MenuItem",
+        "kind": 6,
+        "importPath": "unbound_manager.menu_system",
+        "description": "unbound_manager.menu_system",
+        "peekOfCode": "class MenuItem:\n    \"\"\"Represents a single menu item.\"\"\"\n    name: str\n    action: Callable\n    icon: str = \"•\"\n    description: str = \"\"\n    key: Optional[str] = None\n    style: str = \"cyan\"\n@dataclass\nclass MenuCategory:",
+        "detail": "unbound_manager.menu_system",
+        "documentation": {}
+    },
+    {
+        "label": "MenuCategory",
+        "kind": 6,
+        "importPath": "unbound_manager.menu_system",
+        "description": "unbound_manager.menu_system",
+        "peekOfCode": "class MenuCategory:\n    \"\"\"Represents a category of menu items.\"\"\"\n    name: str\n    items: List[MenuItem] = None\n    icon: str = \"📁\"\n    expanded: bool = False\n    def __post_init__(self):\n        if self.items is None:\n            self.items = []\n    def add_item(self, item: MenuItem) -> None:",
+        "detail": "unbound_manager.menu_system",
+        "documentation": {}
+    },
+    {
+        "label": "InteractiveMenu",
+        "kind": 6,
+        "importPath": "unbound_manager.menu_system",
+        "description": "unbound_manager.menu_system",
+        "peekOfCode": "class InteractiveMenu:\n    \"\"\"Interactive arrow-key driven menu system.\"\"\"\n    def __init__(self):\n        \"\"\"Initialize the interactive menu.\"\"\"\n        self.items: List[Any] = []  # Can be MenuItem or MenuCategory\n        self.current_index = 0\n        self.in_category = False\n        self.category_index = 0\n        self.search_mode = False\n        self.search_query = \"\"",
+        "detail": "unbound_manager.menu_system",
+        "documentation": {}
+    },
+    {
+        "label": "SimpleMenu",
+        "kind": 6,
+        "importPath": "unbound_manager.menu_system",
+        "description": "unbound_manager.menu_system",
+        "peekOfCode": "class SimpleMenu:\n    \"\"\"Simple numbered menu for fallback or specific use cases.\"\"\"\n    def __init__(self, title: str = \"Menu\"):\n        self.title = title\n        self.items: List[tuple] = []  # (name, action, description)\n    def add_item(self, name: str, action: Callable, description: str = \"\") -> None:\n        \"\"\"Add a menu item.\"\"\"\n        self.items.append((name, action, description))\n    def display(self) -> None:\n        \"\"\"Display the menu.\"\"\"",
+        "detail": "unbound_manager.menu_system",
+        "documentation": {}
+    },
+    {
+        "label": "console",
+        "kind": 5,
+        "importPath": "unbound_manager.menu_system",
+        "description": "unbound_manager.menu_system",
+        "peekOfCode": "console = Console()\n@dataclass\nclass MenuItem:\n    \"\"\"Represents a single menu item.\"\"\"\n    name: str\n    action: Callable\n    icon: str = \"•\"\n    description: str = \"\"\n    key: Optional[str] = None\n    style: str = \"cyan\"",
+        "detail": "unbound_manager.menu_system",
+        "documentation": {}
+    },
+    {
         "label": "RedisManager",
         "kind": 6,
         "importPath": "unbound_manager.redis_manager",
@@ -1306,7 +1457,7 @@
         "kind": 2,
         "importPath": "unbound_manager.utils",
         "description": "unbound_manager.utils",
-        "peekOfCode": "def prompt_yes_no(question: str, default: bool = False) -> bool:\n    \"\"\"\n    Prompt the user for a yes/no answer with clear indication of options.\n    Args:\n        question: The question to ask\n        default: Default answer if user just presses Enter\n    Returns:\n        bool: True for yes, False for no\n    \"\"\"\n    # Create the prompt suffix based on default",
+        "peekOfCode": "def prompt_yes_no(question: str, default: bool = True) -> bool:\n    \"\"\"\n    Prompt the user for a yes/no answer.\n    Args:\n        question: The question to ask\n        default: Default answer if user just presses Enter\n    Returns:\n        bool: True for yes, False for no\n    \"\"\"\n    from rich.prompt import Confirm",
         "detail": "unbound_manager.utils",
         "documentation": {}
     },
@@ -1351,7 +1502,7 @@
         "kind": 2,
         "importPath": "unbound_manager.utils",
         "description": "unbound_manager.utils",
-        "peekOfCode": "def install_packages(packages: List[str]) -> bool:\n    \"\"\"Install system packages using apt.\"\"\"\n    try:\n        console.print(f\"[cyan]Installing packages: {', '.join(packages)}[/cyan]\")\n        # Update package list\n        run_command([\"apt\", \"update\"], check=True)\n        # Install packages\n        run_command(\n            [\"apt\", \"install\", \"-y\"] + packages,\n            check=True,",
+        "peekOfCode": "def install_packages(packages: List[str]) -> bool:\n    \"\"\"Install system packages using apt.\"\"\"\n    try:\n        console.print(f\"[cyan]Installing packages: {', '.join(packages)}[/cyan]\")\n        # Update package list\n        with Progress(\n            SpinnerColumn(),\n            TextColumn(\"[progress.description]{task.description}\"),\n            transient=True,\n        ) as progress:",
         "detail": "unbound_manager.utils",
         "documentation": {}
     },

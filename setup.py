@@ -42,7 +42,7 @@ setup(
     name="unbound-manager",
     version=version,
     author="Regix",
-    description="A modern Unbound DNS server management tool",
+    description="A modern Unbound DNS server management tool with interactive menu",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/regix1/unbound-manager",
@@ -73,5 +73,11 @@ setup(
         "Intended Audience :: System Administrators",
         "Topic :: System :: Systems Administration",
         "Topic :: Internet :: Name Service (DNS)",
+        "Development Status :: 4 - Beta",
+        "Natural Language :: English",
     ],
+    project_urls={
+        "Bug Reports": "https://github.com/regix1/unbound-manager/issues",
+        "Source": "https://github.com/regix1/unbound-manager",
+    },
 )
