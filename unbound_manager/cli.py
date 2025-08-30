@@ -248,62 +248,67 @@ class UnboundManagerCLI:
             border_style="cyan"
         ))
         
+        # Check current local version
+        current_version = APP_VERSION
+        console.print(f"[cyan]Current version:[/cyan] {current_version}")
+        
+        # Check remote VERSION file on GitHub
+        console.print("[yellow]Checking for updates...[/yellow]")
+        
         try:
-            # Check current version - always use APP_VERSION from constants
-            current_version = APP_VERSION
-            
-            console.print(f"[cyan]Current version:[/cyan] {current_version}")
-            
-            # Check for updates
             import requests
             
-            console.print("[yellow]Checking for updates...[/yellow]")
+            # Try to get VERSION from main branch
+            response = requests.get(
+                "https://raw.githubusercontent.com/regix1/unbound-manager/main/VERSION",
+                timeout=5
+            )
             
-            try:
+            if response.status_code == 200:
+                remote_version = response.text.strip()
+                console.print(f"[cyan]Latest version:[/cyan] {remote_version}")
+                
+                if remote_version != current_version:
+                    console.print("\n[yellow]⚠ An update is available![/yellow]")
+                    console.print(f"[yellow]Update from {current_version} → {remote_version}[/yellow]")
+                    
+                    if prompt_yes_no("\nWould you like to update now?"):
+                        self.perform_update()
+                else:
+                    console.print("\n[green]✓ You are running the latest version[/green]")
+                    
+            elif response.status_code == 404:
+                # Try master branch if main doesn't exist
                 response = requests.get(
-                    "https://api.github.com/repos/regix1/unbound-manager/releases/latest",
+                    "https://raw.githubusercontent.com/regix1/unbound-manager/master/VERSION",
                     timeout=5
                 )
                 
                 if response.status_code == 200:
-                    data = response.json()
-                    latest_version = data.get("tag_name", "").lstrip("v")
+                    remote_version = response.text.strip()
+                    console.print(f"[cyan]Latest version:[/cyan] {remote_version}")
                     
-                    if not latest_version:
-                        # No releases yet, check commits
-                        console.print("[yellow]No releases found, checking latest commits...[/yellow]")
-                        self.check_git_updates()
-                        return
-                    
-                    console.print(f"[cyan]Latest version:[/cyan] {latest_version}")
-                    
-                    if latest_version != current_version:
+                    if remote_version != current_version:
                         console.print("\n[yellow]⚠ An update is available![/yellow]")
+                        console.print(f"[yellow]Update from {current_version} → {remote_version}[/yellow]")
                         
-                        # Show release notes if available
-                        if data.get("body"):
-                            console.print("\n[cyan]Release Notes:[/cyan]")
-                            console.print(Panel(data["body"][:500], border_style="dim"))
-                        
-                        if prompt_yes_no("Would you like to update now?"):
+                        if prompt_yes_no("\nWould you like to update now?"):
                             self.perform_update()
                     else:
                         console.print("\n[green]✓ You are running the latest version[/green]")
-                elif response.status_code == 404:
-                    console.print("[yellow]No releases found on GitHub[/yellow]")
-                    self.check_git_updates()
                 else:
-                    console.print(f"[yellow]Could not check for updates (HTTP {response.status_code})[/yellow]")
+                    # Fallback to git-based checking
+                    console.print("[yellow]Could not fetch VERSION from GitHub[/yellow]")
+                    self.check_git_updates()
                     
-            except requests.exceptions.RequestException as e:
-                console.print(f"[yellow]Could not connect to GitHub: {e}[/yellow]")
-                console.print("[cyan]You can manually update with: cd ~/unbound-manager && git pull[/cyan]")
-                
+        except requests.exceptions.RequestException as e:
+            console.print(f"[yellow]Could not connect to GitHub: {e}[/yellow]")
+            # Fallback to git-based checking
+            self.check_git_updates()
+            
         except ImportError:
-            console.print("[red]requests library not installed[/red]")
-            console.print("[cyan]Install with: pip3 install requests[/cyan]")
-        except Exception as e:
-            console.print(f"[red]Error checking for updates: {e}[/red]")
+            console.print("[yellow]requests library not installed, using git method[/yellow]")
+            self.check_git_updates()
     
     def check_git_updates(self) -> None:
         """Check for updates using git."""
