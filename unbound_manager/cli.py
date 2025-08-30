@@ -249,12 +249,8 @@ class UnboundManagerCLI:
         ))
         
         try:
-            # Check current version
-            version_file = Path(__file__).parent.parent / "VERSION"
-            if version_file.exists():
-                current_version = version_file.read_text().strip()
-            else:
-                current_version = APP_VERSION
+            # Check current version - always use APP_VERSION from constants
+            current_version = APP_VERSION
             
             console.print(f"[cyan]Current version:[/cyan] {current_version}")
             

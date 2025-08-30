@@ -1,14 +1,23 @@
 from setuptools import setup, find_packages
 from pathlib import Path
 
+# Read version from VERSION file
 version_file = Path(__file__).parent / "VERSION"
-version = version_file.read_text().strip() if version_file.exists() else "2.0.5"
+if not version_file.exists():
+    raise FileNotFoundError("VERSION file not found. Please create it with the version number.")
+version = version_file.read_text().strip()
 
+# Read README
 readme_file = Path(__file__).parent / "README.md"
 long_description = readme_file.read_text(encoding="utf-8") if readme_file.exists() else ""
 
-with open("requirements.txt", "r", encoding="utf-8") as fh:
-    requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+# Read requirements
+requirements_file = Path(__file__).parent / "requirements.txt"
+if requirements_file.exists():
+    with open(requirements_file, "r", encoding="utf-8") as fh:
+        requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+else:
+    requirements = []
 
 setup(
     name="unbound-manager",

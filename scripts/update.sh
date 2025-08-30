@@ -7,6 +7,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 REPO_URL="https://github.com/regix1/unbound-manager.git"
@@ -37,8 +38,11 @@ get_latest_version() {
     curl -s https://api.github.com/repos/regix1/unbound-manager/releases/latest | grep tag_name | cut -d '"' -f 4 2>/dev/null || echo "latest"
 }
 
-echo -e "${CYAN}Current version: $(check_version)${NC}"
-echo -e "${CYAN}Latest version: $(get_latest_version)${NC}"
+CURRENT_VERSION=$(check_version)
+LATEST_VERSION=$(get_latest_version)
+
+echo -e "${CYAN}Current version: ${CURRENT_VERSION}${NC}"
+echo -e "${CYAN}Latest version: ${LATEST_VERSION}${NC}"
 echo
 
 echo "Select an option:"
@@ -74,11 +78,13 @@ case $choice in
         echo -e "${YELLOW}Updating Python package...${NC}"
         pip3 install -e . --upgrade
         
-        echo -e "${GREEN}✓ Update complete!${NC}"
+        # Show new version
+        NEW_VERSION=$(cat VERSION)
+        echo -e "${GREEN}✓ Update complete! Now running v${NEW_VERSION}${NC}"
         ;;
         
     2)
-        echo -e "${YELLOW}Reinstalling current version...${NC}"
+        echo -e "${YELLOW}Reinstalling current version v${CURRENT_VERSION}...${NC}"
         
         # Reinstall pip package
         cd "$INSTALL_DIR"
@@ -115,7 +121,8 @@ case $choice in
         cd "$INSTALL_DIR"
         pip3 install -e .
         
-        echo -e "${GREEN}✓ Force reinstall complete!${NC}"
+        NEW_VERSION=$(cat VERSION)
+        echo -e "${GREEN}✓ Force reinstall complete! Now running v${NEW_VERSION}${NC}"
         ;;
         
     4)

@@ -5,13 +5,29 @@ from pathlib import Path
 
 def get_app_version():
     """Get application version from VERSION file."""
-    version_file = Path(__file__).parent.parent / "VERSION"
-    if version_file.exists():
-        return version_file.read_text().strip()
-    return "2.0.5"  # Updated fallback version
+    # Try multiple paths to find VERSION file
+    possible_paths = [
+        Path(__file__).parent.parent / "VERSION",  # Development
+        Path("/usr/local/lib/python3.9/dist-packages/unbound_manager").parent / "VERSION",  # System install
+        Path("/usr/lib/python3/dist-packages/unbound_manager").parent / "VERSION",  # Alt system
+        Path.home() / "unbound-manager" / "VERSION",  # User install
+    ]
+    
+    for version_path in possible_paths:
+        if version_path.exists():
+            return version_path.read_text().strip()
+    
+    # If no VERSION file found, return unknown
+    return "unknown"
 
 # Version
 APP_VERSION = get_app_version()
+
+# Data directories
+DATA_DIR = Path(__file__).parent.parent / "data"
+TEMPLATES_DIR = DATA_DIR / "templates"
+CONFIGS_DIR = DATA_DIR / "configs"
+SYSTEMD_DIR = DATA_DIR / "systemd"
 
 # Paths
 UNBOUND_DIR = Path("/etc/unbound")
@@ -20,10 +36,6 @@ UNBOUND_CONF_D = UNBOUND_DIR / "unbound.conf.d"
 BACKUP_DIR = UNBOUND_DIR / "backups"
 ROOT_KEY = UNBOUND_DIR / "root.key"
 ROOT_HINTS = UNBOUND_DIR / "root.hints"
-DATA_DIR = Path(__file__).parent.parent / "data"
-TEMPLATES_DIR = DATA_DIR / "templates"
-CONFIGS_DIR = DATA_DIR / "configs"
-SYSTEMD_DIR = DATA_DIR / "systemd"
 
 # Redis
 REDIS_SOCKET = Path("/var/run/redis/redis.sock")

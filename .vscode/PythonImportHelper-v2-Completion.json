@@ -937,7 +937,7 @@
         "kind": 2,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "def get_app_version():\n    \"\"\"Get application version from VERSION file.\"\"\"\n    version_file = Path(__file__).parent.parent / \"VERSION\"\n    if version_file.exists():\n        return version_file.read_text().strip()\n    return \"2.0.5\"  # Updated fallback version\n# Version\nAPP_VERSION = get_app_version()\n# Paths\nUNBOUND_DIR = Path(\"/etc/unbound\")",
+        "peekOfCode": "def get_app_version():\n    \"\"\"Get application version from VERSION file.\"\"\"\n    # Try multiple paths to find VERSION file\n    possible_paths = [\n        Path(__file__).parent.parent / \"VERSION\",  # Development\n        Path(\"/usr/local/lib/python3.9/dist-packages/unbound_manager\").parent / \"VERSION\",  # System install\n        Path(\"/usr/lib/python3/dist-packages/unbound_manager\").parent / \"VERSION\",  # Alt system\n        Path.home() / \"unbound-manager\" / \"VERSION\",  # User install\n    ]\n    for version_path in possible_paths:",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -946,61 +946,7 @@
         "kind": 5,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "APP_VERSION = get_app_version()\n# Paths\nUNBOUND_DIR = Path(\"/etc/unbound\")\nUNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"",
-        "detail": "unbound_manager.constants",
-        "documentation": {}
-    },
-    {
-        "label": "UNBOUND_DIR",
-        "kind": 5,
-        "importPath": "unbound_manager.constants",
-        "description": "unbound_manager.constants",
-        "peekOfCode": "UNBOUND_DIR = Path(\"/etc/unbound\")\nUNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"",
-        "detail": "unbound_manager.constants",
-        "documentation": {}
-    },
-    {
-        "label": "UNBOUND_CONF",
-        "kind": 5,
-        "importPath": "unbound_manager.constants",
-        "description": "unbound_manager.constants",
-        "peekOfCode": "UNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis",
-        "detail": "unbound_manager.constants",
-        "documentation": {}
-    },
-    {
-        "label": "UNBOUND_CONF_D",
-        "kind": 5,
-        "importPath": "unbound_manager.constants",
-        "description": "unbound_manager.constants",
-        "peekOfCode": "UNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")",
-        "detail": "unbound_manager.constants",
-        "documentation": {}
-    },
-    {
-        "label": "BACKUP_DIR",
-        "kind": 5,
-        "importPath": "unbound_manager.constants",
-        "description": "unbound_manager.constants",
-        "peekOfCode": "BACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")",
-        "detail": "unbound_manager.constants",
-        "documentation": {}
-    },
-    {
-        "label": "ROOT_KEY",
-        "kind": 5,
-        "importPath": "unbound_manager.constants",
-        "description": "unbound_manager.constants",
-        "peekOfCode": "ROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd",
-        "detail": "unbound_manager.constants",
-        "documentation": {}
-    },
-    {
-        "label": "ROOT_HINTS",
-        "kind": 5,
-        "importPath": "unbound_manager.constants",
-        "description": "unbound_manager.constants",
-        "peekOfCode": "ROOT_HINTS = UNBOUND_DIR / \"root.hints\"\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")",
+        "peekOfCode": "APP_VERSION = get_app_version()\n# Data directories\nDATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Paths\nUNBOUND_DIR = Path(\"/etc/unbound\")\nUNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -1009,7 +955,7 @@
         "kind": 5,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "DATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs",
+        "peekOfCode": "DATA_DIR = Path(__file__).parent.parent / \"data\"\nTEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Paths\nUNBOUND_DIR = Path(\"/etc/unbound\")\nUNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -1018,7 +964,7 @@
         "kind": 5,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "TEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs\nUNBOUND_RELEASES_URL = \"https://api.github.com/repos/NLnetLabs/unbound/releases\"",
+        "peekOfCode": "TEMPLATES_DIR = DATA_DIR / \"templates\"\nCONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Paths\nUNBOUND_DIR = Path(\"/etc/unbound\")\nUNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -1027,7 +973,7 @@
         "kind": 5,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "CONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs\nUNBOUND_RELEASES_URL = \"https://api.github.com/repos/NLnetLabs/unbound/releases\"\nROOT_HINTS_URL = \"https://www.internic.net/domain/named.cache\"",
+        "peekOfCode": "CONFIGS_DIR = DATA_DIR / \"configs\"\nSYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Paths\nUNBOUND_DIR = Path(\"/etc/unbound\")\nUNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -1036,7 +982,61 @@
         "kind": 5,
         "importPath": "unbound_manager.constants",
         "description": "unbound_manager.constants",
-        "peekOfCode": "SYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs\nUNBOUND_RELEASES_URL = \"https://api.github.com/repos/NLnetLabs/unbound/releases\"\nROOT_HINTS_URL = \"https://www.internic.net/domain/named.cache\"\nROOT_HINTS_BACKUP_URL = \"https://www.dns.icann.org/services/tools/internic/domain/named.cache\"",
+        "peekOfCode": "SYSTEMD_DIR = DATA_DIR / \"systemd\"\n# Paths\nUNBOUND_DIR = Path(\"/etc/unbound\")\nUNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")",
+        "detail": "unbound_manager.constants",
+        "documentation": {}
+    },
+    {
+        "label": "UNBOUND_DIR",
+        "kind": 5,
+        "importPath": "unbound_manager.constants",
+        "description": "unbound_manager.constants",
+        "peekOfCode": "UNBOUND_DIR = Path(\"/etc/unbound\")\nUNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd",
+        "detail": "unbound_manager.constants",
+        "documentation": {}
+    },
+    {
+        "label": "UNBOUND_CONF",
+        "kind": 5,
+        "importPath": "unbound_manager.constants",
+        "description": "unbound_manager.constants",
+        "peekOfCode": "UNBOUND_CONF = UNBOUND_DIR / \"unbound.conf\"\nUNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")",
+        "detail": "unbound_manager.constants",
+        "documentation": {}
+    },
+    {
+        "label": "UNBOUND_CONF_D",
+        "kind": 5,
+        "importPath": "unbound_manager.constants",
+        "description": "unbound_manager.constants",
+        "peekOfCode": "UNBOUND_CONF_D = UNBOUND_DIR / \"unbound.conf.d\"\nBACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs",
+        "detail": "unbound_manager.constants",
+        "documentation": {}
+    },
+    {
+        "label": "BACKUP_DIR",
+        "kind": 5,
+        "importPath": "unbound_manager.constants",
+        "description": "unbound_manager.constants",
+        "peekOfCode": "BACKUP_DIR = UNBOUND_DIR / \"backups\"\nROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs\nUNBOUND_RELEASES_URL = \"https://api.github.com/repos/NLnetLabs/unbound/releases\"",
+        "detail": "unbound_manager.constants",
+        "documentation": {}
+    },
+    {
+        "label": "ROOT_KEY",
+        "kind": 5,
+        "importPath": "unbound_manager.constants",
+        "description": "unbound_manager.constants",
+        "peekOfCode": "ROOT_KEY = UNBOUND_DIR / \"root.key\"\nROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs\nUNBOUND_RELEASES_URL = \"https://api.github.com/repos/NLnetLabs/unbound/releases\"\nROOT_HINTS_URL = \"https://www.internic.net/domain/named.cache\"",
+        "detail": "unbound_manager.constants",
+        "documentation": {}
+    },
+    {
+        "label": "ROOT_HINTS",
+        "kind": 5,
+        "importPath": "unbound_manager.constants",
+        "description": "unbound_manager.constants",
+        "peekOfCode": "ROOT_HINTS = UNBOUND_DIR / \"root.hints\"\n# Redis\nREDIS_SOCKET = Path(\"/var/run/redis/redis.sock\")\nREDIS_CONF = Path(\"/etc/redis/redis.conf\")\n# Systemd\nSYSTEMD_SERVICE = Path(\"/etc/systemd/system/unbound.service\")\n# URLs\nUNBOUND_RELEASES_URL = \"https://api.github.com/repos/NLnetLabs/unbound/releases\"\nROOT_HINTS_URL = \"https://www.internic.net/domain/named.cache\"\nROOT_HINTS_BACKUP_URL = \"https://www.dns.icann.org/services/tools/internic/domain/named.cache\"",
         "detail": "unbound_manager.constants",
         "documentation": {}
     },
@@ -1369,7 +1369,7 @@
         "kind": 5,
         "importPath": "setup",
         "description": "setup",
-        "peekOfCode": "version_file = Path(__file__).parent / \"VERSION\"\nversion = version_file.read_text().strip() if version_file.exists() else \"2.0.5\"\nreadme_file = Path(__file__).parent / \"README.md\"\nlong_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\nwith open(\"requirements.txt\", \"r\", encoding=\"utf-8\") as fh:\n    requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nsetup(\n    name=\"unbound-manager\",\n    version=version,\n    author=\"Regix\",",
+        "peekOfCode": "version_file = Path(__file__).parent / \"VERSION\"\nif not version_file.exists():\n    raise FileNotFoundError(\"VERSION file not found. Please create it with the version number.\")\nversion = version_file.read_text().strip()\n# Read README\nreadme_file = Path(__file__).parent / \"README.md\"\nlong_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\n# Read requirements\nrequirements_file = Path(__file__).parent / \"requirements.txt\"\nif requirements_file.exists():",
         "detail": "setup",
         "documentation": {}
     },
@@ -1378,7 +1378,7 @@
         "kind": 5,
         "importPath": "setup",
         "description": "setup",
-        "peekOfCode": "version = version_file.read_text().strip() if version_file.exists() else \"2.0.5\"\nreadme_file = Path(__file__).parent / \"README.md\"\nlong_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\nwith open(\"requirements.txt\", \"r\", encoding=\"utf-8\") as fh:\n    requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nsetup(\n    name=\"unbound-manager\",\n    version=version,\n    author=\"Regix\",\n    description=\"A modern Unbound DNS server management tool\",",
+        "peekOfCode": "version = version_file.read_text().strip()\n# Read README\nreadme_file = Path(__file__).parent / \"README.md\"\nlong_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\n# Read requirements\nrequirements_file = Path(__file__).parent / \"requirements.txt\"\nif requirements_file.exists():\n    with open(requirements_file, \"r\", encoding=\"utf-8\") as fh:\n        requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nelse:",
         "detail": "setup",
         "documentation": {}
     },
@@ -1387,7 +1387,7 @@
         "kind": 5,
         "importPath": "setup",
         "description": "setup",
-        "peekOfCode": "readme_file = Path(__file__).parent / \"README.md\"\nlong_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\nwith open(\"requirements.txt\", \"r\", encoding=\"utf-8\") as fh:\n    requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nsetup(\n    name=\"unbound-manager\",\n    version=version,\n    author=\"Regix\",\n    description=\"A modern Unbound DNS server management tool\",\n    long_description=long_description,",
+        "peekOfCode": "readme_file = Path(__file__).parent / \"README.md\"\nlong_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\n# Read requirements\nrequirements_file = Path(__file__).parent / \"requirements.txt\"\nif requirements_file.exists():\n    with open(requirements_file, \"r\", encoding=\"utf-8\") as fh:\n        requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nelse:\n    requirements = []\nsetup(",
         "detail": "setup",
         "documentation": {}
     },
@@ -1396,7 +1396,16 @@
         "kind": 5,
         "importPath": "setup",
         "description": "setup",
-        "peekOfCode": "long_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\nwith open(\"requirements.txt\", \"r\", encoding=\"utf-8\") as fh:\n    requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nsetup(\n    name=\"unbound-manager\",\n    version=version,\n    author=\"Regix\",\n    description=\"A modern Unbound DNS server management tool\",\n    long_description=long_description,\n    long_description_content_type=\"text/markdown\",",
+        "peekOfCode": "long_description = readme_file.read_text(encoding=\"utf-8\") if readme_file.exists() else \"\"\n# Read requirements\nrequirements_file = Path(__file__).parent / \"requirements.txt\"\nif requirements_file.exists():\n    with open(requirements_file, \"r\", encoding=\"utf-8\") as fh:\n        requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nelse:\n    requirements = []\nsetup(\n    name=\"unbound-manager\",",
+        "detail": "setup",
+        "documentation": {}
+    },
+    {
+        "label": "requirements_file",
+        "kind": 5,
+        "importPath": "setup",
+        "description": "setup",
+        "peekOfCode": "requirements_file = Path(__file__).parent / \"requirements.txt\"\nif requirements_file.exists():\n    with open(requirements_file, \"r\", encoding=\"utf-8\") as fh:\n        requirements = [line.strip() for line in fh if line.strip() and not line.startswith(\"#\")]\nelse:\n    requirements = []\nsetup(\n    name=\"unbound-manager\",\n    version=version,\n    author=\"Regix\",",
         "detail": "setup",
         "documentation": {}
     }
