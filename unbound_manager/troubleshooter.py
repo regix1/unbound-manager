@@ -1,5 +1,7 @@
 """Troubleshooting tools for Unbound."""
 
+from __future__ import annotations
+
 import sys
 import time
 from pathlib import Path
@@ -9,8 +11,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.syntax import Syntax
 
-from .constants import UNBOUND_DIR, UNBOUND_CONF_D
-from .utils import run_command, check_service_status, check_port_listening
+from .constants import UNBOUND_DIR, UNBOUND_CONF_D, UNBOUND_SERVICE, REDIS_SERVICE
+from .utils import run_command, check_service_status, check_port_listening, format_bytes, parse_unbound_stats
 
 console = Console()
 
@@ -30,13 +32,13 @@ class Troubleshooter:
         
         # Check services
         console.print("\n[cyan]Checking services...[/cyan]")
-        if not check_service_status("unbound"):
+        if not check_service_status(UNBOUND_SERVICE):
             issues.append("Unbound service is not running")
             console.print("[red]✗[/red] Unbound service is not running")
         else:
             console.print("[green]✓[/green] Unbound service is running")
         
-        if not check_service_status("redis-server"):
+        if not check_service_status(REDIS_SERVICE):
             issues.append("Redis service is not running")
             console.print("[yellow]⚠[/yellow] Redis service is not running")
         else:
@@ -154,7 +156,7 @@ class Troubleshooter:
         
         try:
             result = run_command(
-                ["journalctl", "-u", "unbound", "-n", str(lines), "--no-pager"],
+                ["journalctl", "-u", UNBOUND_SERVICE, "-n", str(lines), "--no-pager"],
                 check=False
             )
             
@@ -181,12 +183,8 @@ class Troubleshooter:
                 console.print("[yellow]Make sure Unbound is running and control is configured[/yellow]")
                 return
             
-            # Parse statistics
-            stats = {}
-            for line in result.stdout.split('\n'):
-                if '=' in line:
-                    key, value = line.split('=', 1)
-                    stats[key] = value.strip()
+            # Parse statistics using shared helper
+            stats = parse_unbound_stats(result.stdout)
             
             # Create statistics table
             table = Table(title="Query Statistics", title_style="bold cyan")
@@ -248,7 +246,7 @@ class Troubleshooter:
                     bytes_val = int(stats[key])
                     if bytes_val > 0:
                         memory_found = True
-                        size = self._format_bytes(bytes_val)
+                        size = format_bytes(bytes_val)
                         console.print(f"  {label}: {size}")
                 except (ValueError, TypeError):
                     # Some memory values might not be integers
@@ -268,7 +266,7 @@ class Troubleshooter:
                     formatted_key = key.replace('mem.', '').replace('.', ' ').replace('_', ' ').title()
                     try:
                         bytes_val = int(value)
-                        console.print(f"  {formatted_key}: {self._format_bytes(bytes_val)}")
+                        console.print(f"  {formatted_key}: {format_bytes(bytes_val)}")
                     except ValueError:
                         console.print(f"  {formatted_key}: {value}")
             
@@ -289,13 +287,7 @@ class Troubleshooter:
                 formatted_key = key.replace('thread', 'Thread ').replace('.', ' ').replace('_', ' ').title()
                 console.print(f"  {formatted_key}: {value}")
     
-    def _format_bytes(self, bytes_value: int) -> str:
-        """Format bytes to human readable string."""
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-            if bytes_value < 1024.0:
-                return f"{bytes_value:.2f} {unit}"
-            bytes_value /= 1024.0
-        return f"{bytes_value:.2f} PB"
+
     
     def show_extended_statistics(self) -> None:
         """Show all available Unbound statistics for debugging."""

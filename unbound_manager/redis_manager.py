@@ -1,5 +1,7 @@
 """Redis integration management for Unbound."""
 
+from __future__ import annotations
+
 import time
 from pathlib import Path
 from typing import Optional
@@ -7,7 +9,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from .constants import REDIS_SOCKET, REDIS_CONF, UNBOUND_CONF_D
+from .constants import REDIS_SOCKET, REDIS_CONF, UNBOUND_CONF_D, REDIS_SERVICE
 from .utils import (
     run_command, check_service_status, restart_service,
     check_package_installed, install_packages, set_file_permissions
@@ -81,7 +83,7 @@ class RedisManager:
         
         # Restart Redis
         console.print("[cyan]Restarting Redis service...[/cyan]")
-        if restart_service("redis-server"):
+        if restart_service(REDIS_SERVICE):
             console.print("[green]✓[/green] Redis service restarted")
         else:
             console.print("[red]Failed to restart Redis[/red]")
@@ -133,7 +135,7 @@ class RedisManager:
             border_style="cyan"
         ))
         
-        if not check_service_status("redis-server"):
+        if not check_service_status(REDIS_SERVICE):
             console.print("[red]Redis is not running[/red]")
             return
         
@@ -223,7 +225,7 @@ class RedisManager:
         run_command(["usermod", "-a", "-G", "redis", "unbound"])
         
         # Restart Redis
-        restart_service("redis-server")
+        restart_service(REDIS_SERVICE)
         
         # Test connection
         if self.test_redis_connection():

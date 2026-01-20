@@ -52,6 +52,10 @@ REDIS_CONF = Path("/etc/redis/redis.conf")
 # Systemd
 SYSTEMD_SERVICE = Path("/etc/systemd/system/unbound.service")
 
+# Service names (to avoid typos and make changes easy)
+UNBOUND_SERVICE = "unbound"
+REDIS_SERVICE = "redis-server"
+
 # URLs
 UNBOUND_RELEASES_URL = "https://api.github.com/repos/NLnetLabs/unbound/releases"
 ROOT_HINTS_URL = "https://www.internic.net/domain/named.cache"
@@ -96,3 +100,122 @@ TEST_DOMAINS = {
     "mx": "gmail.com",
     "txt": "google.com",
 }
+
+# DNS Upstream Providers
+# Each provider has: name, description, servers (with DoT info), and whether it's encrypted
+DNS_PROVIDERS = {
+    "cloudflare": {
+        "name": "Cloudflare",
+        "description": "Fastest public DNS, privacy-focused, KPMG audited",
+        "encrypted": True,
+        "servers": [
+            {"ip": "1.1.1.1", "port": 853, "hostname": "cloudflare-dns.com"},
+            {"ip": "1.0.0.1", "port": 853, "hostname": "cloudflare-dns.com"},
+            {"ip": "2606:4700:4700::1111", "port": 853, "hostname": "cloudflare-dns.com", "ipv6": True},
+            {"ip": "2606:4700:4700::1001", "port": 853, "hostname": "cloudflare-dns.com", "ipv6": True},
+        ],
+    },
+    "cloudflare_malware": {
+        "name": "Cloudflare (Malware Blocking)",
+        "description": "Cloudflare with malware filtering enabled",
+        "encrypted": True,
+        "servers": [
+            {"ip": "1.1.1.2", "port": 853, "hostname": "security.cloudflare-dns.com"},
+            {"ip": "1.0.0.2", "port": 853, "hostname": "security.cloudflare-dns.com"},
+        ],
+    },
+    "cloudflare_family": {
+        "name": "Cloudflare (Family Safe)",
+        "description": "Cloudflare with malware + adult content filtering",
+        "encrypted": True,
+        "servers": [
+            {"ip": "1.1.1.3", "port": 853, "hostname": "family.cloudflare-dns.com"},
+            {"ip": "1.0.0.3", "port": 853, "hostname": "family.cloudflare-dns.com"},
+        ],
+    },
+    "quad9": {
+        "name": "Quad9",
+        "description": "Swiss non-profit, maximum privacy, malware blocking",
+        "encrypted": True,
+        "servers": [
+            {"ip": "9.9.9.9", "port": 853, "hostname": "dns.quad9.net"},
+            {"ip": "149.112.112.112", "port": 853, "hostname": "dns.quad9.net"},
+            {"ip": "2620:fe::fe", "port": 853, "hostname": "dns.quad9.net", "ipv6": True},
+            {"ip": "2620:fe::9", "port": 853, "hostname": "dns.quad9.net", "ipv6": True},
+        ],
+    },
+    "quad9_unsecured": {
+        "name": "Quad9 (No Filtering)",
+        "description": "Quad9 without malware blocking",
+        "encrypted": True,
+        "servers": [
+            {"ip": "9.9.9.10", "port": 853, "hostname": "dns10.quad9.net"},
+            {"ip": "149.112.112.10", "port": 853, "hostname": "dns10.quad9.net"},
+        ],
+    },
+    "google": {
+        "name": "Google DNS",
+        "description": "Fast and reliable, DNSSEC support",
+        "encrypted": True,
+        "servers": [
+            {"ip": "8.8.8.8", "port": 853, "hostname": "dns.google"},
+            {"ip": "8.8.4.4", "port": 853, "hostname": "dns.google"},
+            {"ip": "2001:4860:4860::8888", "port": 853, "hostname": "dns.google", "ipv6": True},
+            {"ip": "2001:4860:4860::8844", "port": 853, "hostname": "dns.google", "ipv6": True},
+        ],
+    },
+    "opendns": {
+        "name": "OpenDNS (Cisco)",
+        "description": "Reliable with phishing protection",
+        "encrypted": True,
+        "servers": [
+            {"ip": "208.67.222.222", "port": 853, "hostname": "dns.opendns.com"},
+            {"ip": "208.67.220.220", "port": 853, "hostname": "dns.opendns.com"},
+        ],
+    },
+    "adguard": {
+        "name": "AdGuard DNS",
+        "description": "Ad and tracker blocking built-in",
+        "encrypted": True,
+        "servers": [
+            {"ip": "94.140.14.14", "port": 853, "hostname": "dns.adguard-dns.com"},
+            {"ip": "94.140.15.15", "port": 853, "hostname": "dns.adguard-dns.com"},
+        ],
+    },
+    "adguard_family": {
+        "name": "AdGuard DNS (Family)",
+        "description": "AdGuard with adult content filtering",
+        "encrypted": True,
+        "servers": [
+            {"ip": "94.140.14.15", "port": 853, "hostname": "family.adguard-dns.com"},
+            {"ip": "94.140.15.16", "port": 853, "hostname": "family.adguard-dns.com"},
+        ],
+    },
+    "none": {
+        "name": "Full Recursion (No Forwarding)",
+        "description": "Query root servers directly - most private, slower",
+        "encrypted": False,
+        "servers": [],
+    },
+    "custom_unencrypted": {
+        "name": "Custom Unencrypted DNS",
+        "description": "Use your own DNS servers (unencrypted)",
+        "encrypted": False,
+        "servers": [],
+    },
+}
+
+# Recommended providers shown first in selection menu
+DNS_PROVIDER_ORDER = [
+    "quad9",
+    "cloudflare",
+    "cloudflare_malware",
+    "google",
+    "adguard",
+    "none",
+    "cloudflare_family",
+    "adguard_family",
+    "quad9_unsecured",
+    "opendns",
+    "custom_unencrypted",
+]

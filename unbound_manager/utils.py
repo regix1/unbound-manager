@@ -1,5 +1,7 @@
 """Utility functions for the Unbound Manager."""
 
+from __future__ import annotations
+
 import os
 import sys
 import subprocess
@@ -54,6 +56,9 @@ def run_command(
             cwd=cwd,
         )
         return result
+    except FileNotFoundError:
+        console.print(f"[red]Command not found: {command[0]}[/red]")
+        raise
     except subprocess.TimeoutExpired:
         console.print(f"[red]Command timed out: {' '.join(command)}[/red]")
         raise
@@ -115,10 +120,13 @@ def get_server_ip() -> str:
 
 def check_port_listening(port: int, host: str = "127.0.0.1") -> bool:
     """Check if a port is listening."""
-    for conn in psutil.net_connections():
-        if conn.status == 'LISTEN' and conn.laddr.port == port:
-            if host == "0.0.0.0" or conn.laddr.ip == host or conn.laddr.ip == "0.0.0.0":
-                return True
+    try:
+        for conn in psutil.net_connections(kind="inet"):
+            if conn.status == 'LISTEN' and conn.laddr.port == port:
+                if host == "0.0.0.0" or conn.laddr.ip == host or conn.laddr.ip == "0.0.0.0":
+                    return True
+    except (psutil.AccessDenied, psutil.NoSuchProcess):
+        pass
     return False
 
 
@@ -230,6 +238,24 @@ def format_bytes(bytes_value: int) -> str:
             return f"{bytes_value:.2f} {unit}"
         bytes_value /= 1024.0
     return f"{bytes_value:.2f} PB"
+
+
+def print_header(title: str, width: int = 58) -> None:
+    """Print a consistent ASCII header for CLI screens."""
+    console.print("┌" + "─" * width + "┐")
+    console.print(f"│  [bold cyan]{title:^{width-4}}[/bold cyan]  │")
+    console.print("└" + "─" * width + "┘")
+    console.print()
+
+
+def parse_unbound_stats(raw: str) -> Dict[str, str]:
+    """Parse unbound-control stats output into a dictionary."""
+    stats: Dict[str, str] = {}
+    for line in raw.splitlines():
+        if "=" in line:
+            key, value = line.split("=", 1)
+            stats[key] = value.strip()
+    return stats
 
 
 def validate_ip_address(ip: str) -> bool:

@@ -1,5 +1,7 @@
 """Backup and restore functionality for Unbound."""
 
+from __future__ import annotations
+
 import shutil
 import tarfile
 from datetime import datetime
@@ -111,7 +113,7 @@ class BackupManager:
             temp_dir.mkdir(exist_ok=True)
             
             with tarfile.open(backup_path, "r:gz") as tar:
-                tar.extractall(temp_dir)
+                self._safe_extract(tar, temp_dir)
             
             # Move files to Unbound directory
             for item in temp_dir.iterdir():
@@ -139,18 +141,32 @@ class BackupManager:
             
             # Restart Unbound
             from .utils import restart_service
+            from .constants import UNBOUND_SERVICE
             console.print("[cyan]Restarting Unbound service...[/cyan]")
-            if restart_service("unbound"):
+            if restart_service(UNBOUND_SERVICE):
                 console.print("[green]✓[/green] Unbound service restarted")
             else:
                 console.print("[yellow]⚠[/yellow] Please restart Unbound manually")
             
             return True
             
+        except ValueError as e:
+            console.print(f"[red]Security error: {e}[/red]")
+            return False
         except Exception as e:
             console.print(f"[red]Restore failed: {e}[/red]")
             return False
     
+
+    def _safe_extract(self, tar: tarfile.TarFile, dest: Path) -> None:
+        """Safely extract tar archive, preventing path traversal attacks."""
+        dest = dest.resolve()
+        for member in tar.getmembers():
+            target = (dest / member.name).resolve()
+            if not str(target).startswith(str(dest)):
+                raise ValueError(f"Blocked path traversal attempt in backup: {member.name}")
+        tar.extractall(dest)
+
     def _format_size(self, size: int) -> str:
         """Format file size to human readable."""
         for unit in ['B', 'KB', 'MB', 'GB']:

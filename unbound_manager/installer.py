@@ -1,5 +1,7 @@
 """Unbound installation and management module."""
 
+from __future__ import annotations
+
 import os
 import time
 import shutil
@@ -14,7 +16,8 @@ from rich.prompt import Prompt
 
 from .constants import (
     UNBOUND_DIR, UNBOUND_CONF, UNBOUND_CONF_D,
-    UNBOUND_RELEASES_URL, SYSTEMD_SERVICE
+    UNBOUND_RELEASES_URL, SYSTEMD_SERVICE,
+    UNBOUND_SERVICE, REDIS_SERVICE
 )
 from .utils import (
     run_command, ensure_user_exists, ensure_directory,
@@ -365,7 +368,7 @@ class UnboundInstaller:
             
             # NOW stop Unbound for the quick install
             console.print("[cyan]Stopping Unbound service for installation...[/cyan]")
-            run_command(["systemctl", "stop", "unbound"])
+            run_command(["systemctl", "stop", UNBOUND_SERVICE])
             
             # Install (should be quick since already compiled)
             console.print("[cyan]Installing new Unbound version...[/cyan]")
@@ -378,13 +381,13 @@ class UnboundInstaller:
             
             # Start service immediately
             console.print("[cyan]Starting Unbound service...[/cyan]")
-            run_command(["systemctl", "start", "unbound"])
+            run_command(["systemctl", "start", UNBOUND_SERVICE])
             
             # Wait for service to be ready
             time.sleep(3)
             
             # Verify service is running
-            if check_service_status("unbound"):
+            if check_service_status(UNBOUND_SERVICE):
                 console.print("[green]✓[/green] Unbound service started successfully")
                 
                 # Test DNS resolution
@@ -423,7 +426,7 @@ class UnboundInstaller:
             # Restore from backup
             console.print("[yellow]Restoring from backup...[/yellow]")
             backup_manager.restore_specific_backup(backup_path)
-            run_command(["systemctl", "start", "unbound"])
+            run_command(["systemctl", "start", UNBOUND_SERVICE])
             console.print("[green]✓[/green] Restored from backup")
     
     def setup_directories(self) -> None:
@@ -501,6 +504,11 @@ class UnboundInstaller:
             server_ip = Prompt.ask("Enter server IP address")
             self.config_manager.create_full_configuration(server_ip)
         
+        # Select and configure DNS upstream provider
+        console.print()
+        dns_provider = self.config_manager.select_dns_upstream()
+        self.config_manager.create_forwarding_config(dns_provider)
+        
         # Setup DNSSEC
         self.dnssec_manager.setup_root_hints()
         self.dnssec_manager.setup_trust_anchor()
@@ -515,17 +523,24 @@ class UnboundInstaller:
         
         # Enable and start service
         console.print("[cyan]Starting Unbound service...[/cyan]")
-        run_command(["systemctl", "enable", "unbound"])
-        run_command(["systemctl", "start", "unbound"])
+        run_command(["systemctl", "enable", UNBOUND_SERVICE])
+        run_command(["systemctl", "start", UNBOUND_SERVICE])
         
         # Verify installation
         from .tester import UnboundTester
         tester = UnboundTester()
         if tester.verify_installation():
+            # Show summary with DNS provider info
+            dns_mode = "Encrypted (DoT)" if dns_provider.get("encrypted") else "Unencrypted"
+            if dns_provider.get("key") == "none":
+                dns_mode = "Full Recursion"
+            
             console.print(Panel.fit(
                 "[bold green]✓ Unbound installed successfully![/bold green]\n\n"
                 f"Version: {version}\n"
                 f"Configuration: /etc/unbound/\n"
+                f"DNS Provider: {dns_provider.get('name', 'Unknown')}\n"
+                f"DNS Mode: {dns_mode}\n"
                 f"Service: systemctl status unbound",
                 border_style="green"
             ))
@@ -585,8 +600,8 @@ class UnboundInstaller:
         # Restart services
         console.print("[cyan]Restarting services...[/cyan]")
         run_command(["systemctl", "daemon-reload"])
-        run_command(["systemctl", "restart", "redis-server"])
-        run_command(["systemctl", "restart", "unbound"])
+        run_command(["systemctl", "restart", REDIS_SERVICE])
+        run_command(["systemctl", "restart", UNBOUND_SERVICE])
         
         console.print("[green]✓[/green] Installation fixes applied")
         

@@ -39,3 +39,6 @@ Thumbs.db
 *.log
 *.pid
 *.bak
+
+# Serena
+.serena/

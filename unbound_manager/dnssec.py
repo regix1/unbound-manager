@@ -1,5 +1,7 @@
 """DNSSEC management for Unbound."""
 
+from __future__ import annotations
+
 import time
 from pathlib import Path
 from typing import Optional
@@ -21,6 +23,7 @@ class DNSSECManager:
         console.print("[cyan]Setting up root hints...[/cyan]")
         
         # Backup existing file if it exists
+        backup_path = None
         if ROOT_HINTS.exists():
             backup_path = ROOT_HINTS.with_suffix('.hints.bak')
             console.print(f"[yellow]Backing up existing root hints to {backup_path}[/yellow]")
@@ -40,7 +43,7 @@ class DNSSECManager:
             return True
         
         # Restore backup if download failed
-        if backup_path.exists():
+        if backup_path and backup_path.exists():
             console.print("[yellow]Download failed, restoring backup[/yellow]")
             backup_path.rename(ROOT_HINTS)
         
@@ -166,17 +169,19 @@ class DNSSECManager:
         ))
         
         import dns.resolver
+        import dns.flags
+        
+        # Create resolver outside try block to avoid UnboundLocalError
+        resolver = dns.resolver.Resolver()
+        resolver.nameservers = ['127.0.0.1']
+        resolver.use_edns = True
+        resolver.edns = 0
+        resolver.ednsflags = dns.flags.DO
         
         # Test positive validation
         console.print("[cyan]Testing DNSSEC validation with signed domain (iana.org)...[/cyan]")
         
         try:
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = ['127.0.0.1']
-            resolver.use_edns = True
-            resolver.edns = 0
-            resolver.ednsflags = dns.flags.DO
-            
             answer = resolver.resolve('iana.org', 'A')
             
             # Check AD flag

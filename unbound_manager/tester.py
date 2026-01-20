@@ -1,5 +1,7 @@
 """Testing suite for Unbound functionality."""
 
+from __future__ import annotations
+
 import time
 import statistics
 from typing import List, Tuple, Optional
@@ -8,7 +10,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from .constants import TEST_DOMAINS
+from .constants import TEST_DOMAINS, UNBOUND_SERVICE
 from .utils import run_command, check_service_status
 
 console = Console()
@@ -42,7 +44,7 @@ class UnboundTester:
             return False
         
         # Check service
-        if not check_service_status("unbound"):
+        if not check_service_status(UNBOUND_SERVICE):
             console.print("[red]✗[/red] Unbound service is not running")
             return False
         
@@ -313,7 +315,7 @@ class UnboundTester:
         
         # Service status
         console.print("\n[bold]1. Service Status[/bold]")
-        if check_service_status("unbound"):
+        if check_service_status(UNBOUND_SERVICE):
             console.print("[green]✓[/green] Unbound service is running")
         else:
             console.print("[red]✗[/red] Unbound service is not running")

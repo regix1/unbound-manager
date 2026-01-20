@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Main CLI interface for Unbound Manager with interactive menu."""
 
+from __future__ import annotations
+
 import sys
 import os
 import time
@@ -17,8 +19,8 @@ from rich.text import Text
 from rich.align import Align
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
-from .constants import APP_VERSION
-from .utils import check_root, check_service_status, run_command, prompt_yes_no
+from .constants import APP_VERSION, UNBOUND_SERVICE, REDIS_SERVICE
+from .utils import check_root, check_service_status, run_command, prompt_yes_no, print_header, parse_unbound_stats
 from .installer import UnboundInstaller
 from .config_manager import ConfigManager
 from .redis_manager import RedisManager
@@ -70,8 +72,8 @@ class UnboundManagerCLI:
         console.clear()
         
         # Get service status
-        unbound_status = check_service_status("unbound")
-        redis_status = check_service_status("redis-server")
+        unbound_status = check_service_status(UNBOUND_SERVICE)
+        redis_status = check_service_status(REDIS_SERVICE)
         
         # Build status indicators
         unbound_indicator = "[green]●[/green]" if unbound_status else "[red]○[/red]"
@@ -123,6 +125,11 @@ class UnboundManagerCLI:
             "Access Control",
             self.wrap_action(self.config_manager.edit_access_control),
             description="Manage allowed networks"
+        ))
+        config_category.add_item(MenuItem(
+            "DNS Upstream",
+            self.change_dns_upstream,
+            description="Change DNS provider (encrypted/unencrypted)"
         ))
         config_category.add_item(MenuItem(
             "Redis Cache",
@@ -244,20 +251,20 @@ class UnboundManagerCLI:
         table.add_column("Details", width=26)
         
         # Unbound status
-        unbound_status = check_service_status("unbound")
+        unbound_status = check_service_status(UNBOUND_SERVICE)
         if unbound_status:
             unbound_display = "[green]● Active[/green]"
-            unbound_details = self._get_service_uptime("unbound")
+            unbound_details = self._get_service_uptime(UNBOUND_SERVICE)
         else:
             unbound_display = "[red]○ Inactive[/red]"
             unbound_details = "Service not running"
         table.add_row("Unbound DNS", unbound_display, unbound_details)
         
         # Redis status
-        redis_status = check_service_status("redis-server")
+        redis_status = check_service_status(REDIS_SERVICE)
         if redis_status:
             redis_display = "[green]● Active[/green]"
-            redis_details = self._get_service_uptime("redis-server")
+            redis_details = self._get_service_uptime(REDIS_SERVICE)
         else:
             redis_display = "[red]○ Inactive[/red]"
             redis_details = "Service not running"
@@ -318,11 +325,7 @@ class UnboundManagerCLI:
         try:
             result = run_command(["unbound-control", "stats"], check=False)
             if result.returncode == 0:
-                stats = {}
-                for line in result.stdout.split('\n'):
-                    if '=' in line:
-                        key, value = line.split('=', 1)
-                        stats[key] = value.strip()
+                stats = parse_unbound_stats(result.stdout)
                 
                 queries = stats.get("total.num.queries", "0")
                 cache_hits = stats.get("total.num.cachehits", "0")
@@ -375,8 +378,8 @@ class UnboundManagerCLI:
         console.print()
         
         # Show current status
-        unbound_running = check_service_status("unbound")
-        redis_running = check_service_status("redis-server")
+        unbound_running = check_service_status(UNBOUND_SERVICE)
+        redis_running = check_service_status(REDIS_SERVICE)
         
         console.print("[bold]Current Status:[/bold]")
         console.print(f"  Unbound : {'[green]● Running[/green]' if unbound_running else '[red]○ Stopped[/red]'}")
@@ -402,16 +405,16 @@ class UnboundManagerCLI:
             console.print("\n[cyan]Starting services...[/cyan]")
             with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
                 task = progress.add_task("Starting Redis...", total=None)
-                restart_service("redis-server")
+                restart_service(REDIS_SERVICE)
                 progress.update(task, description="Starting Unbound...")
-                restart_service("unbound")
+                restart_service(UNBOUND_SERVICE)
                 progress.update(task, completed=True)
             console.print("[green]✓[/green] Services started")
             time.sleep(2)
         elif choice == "2":
             console.print("\n[cyan]Stopping services...[/cyan]")
-            run_command(["systemctl", "stop", "unbound"])
-            run_command(["systemctl", "stop", "redis-server"])
+            run_command(["systemctl", "stop", UNBOUND_SERVICE])
+            run_command(["systemctl", "stop", REDIS_SERVICE])
             console.print("[yellow]Services stopped[/yellow]")
             time.sleep(2)
         elif choice == "3":
@@ -440,12 +443,12 @@ class UnboundManagerCLI:
         choice = Prompt.ask("Select action", choices=["0", "1", "2", "3", "4", "5", "6"])
         
         actions = {
-            "1": ("Starting Unbound...", lambda: restart_service("unbound")),
-            "2": ("Stopping Unbound...", lambda: run_command(["systemctl", "stop", "unbound"])),
-            "3": ("Restarting Unbound...", lambda: restart_service("unbound")),
-            "4": ("Starting Redis...", lambda: restart_service("redis-server")),
-            "5": ("Stopping Redis...", lambda: run_command(["systemctl", "stop", "redis-server"])),
-            "6": ("Restarting Redis...", lambda: restart_service("redis-server")),
+            "1": ("Starting Unbound...", lambda: restart_service(UNBOUND_SERVICE)),
+            "2": ("Stopping Unbound...", lambda: run_command(["systemctl", "stop", UNBOUND_SERVICE])),
+            "3": ("Restarting Unbound...", lambda: restart_service(UNBOUND_SERVICE)),
+            "4": ("Starting Redis...", lambda: restart_service(REDIS_SERVICE)),
+            "5": ("Stopping Redis...", lambda: run_command(["systemctl", "stop", REDIS_SERVICE])),
+            "6": ("Restarting Redis...", lambda: restart_service(REDIS_SERVICE)),
         }
         
         if choice != "0":
@@ -531,7 +534,7 @@ class UnboundManagerCLI:
         elif choice == "4":
             console.print("\n[cyan]Following logs... Press Ctrl+C to stop[/cyan]\n")
             try:
-                run_command(["journalctl", "-u", "unbound", "-f"])
+                run_command(["journalctl", "-u", UNBOUND_SERVICE, "-f"], check=False, capture_output=False)
             except KeyboardInterrupt:
                 pass
         
@@ -668,6 +671,62 @@ class UnboundManagerCLI:
         except Exception as e:
             console.print(f"[red]Update failed: {e}[/red]")
     
+
+    def change_dns_upstream(self) -> None:
+        """Change DNS upstream provider."""
+        console.clear()
+        
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│              [bold cyan]DNS UPSTREAM CONFIGURATION[/bold cyan]              │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
+        
+        # Show current configuration
+        self.config_manager.show_current_dns_config()
+        console.print()
+        
+        if not prompt_yes_no("Change DNS upstream provider?", default=True):
+            console.print("[yellow]No changes made[/yellow]")
+            console.print("\n[dim]Press Enter to continue...[/dim]")
+            input()
+            return
+        
+        # Select new provider
+        dns_provider = self.config_manager.select_dns_upstream()
+        
+        # Create backup before changes
+        console.print("\n[cyan]Creating backup...[/cyan]")
+        self.backup_manager.create_backup("before_dns_change")
+        
+        # Apply new configuration
+        self.config_manager.create_forwarding_config(dns_provider)
+        
+        # Restart Unbound to apply changes
+        console.print("\n[cyan]Restarting Unbound...[/cyan]")
+        from .utils import restart_service
+        if restart_service(UNBOUND_SERVICE):
+            console.print("[green]✓[/green] Unbound restarted successfully")
+            
+            # Test DNS resolution
+            console.print("\n[cyan]Testing DNS resolution...[/cyan]")
+            try:
+                result = run_command(
+                    ["dig", "@127.0.0.1", "+short", "example.com"],
+                    check=False,
+                    timeout=10
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    console.print("[green]✓[/green] DNS resolution working!")
+                else:
+                    console.print("[yellow]⚠[/yellow] DNS test inconclusive")
+            except Exception:
+                console.print("[yellow]⚠[/yellow] Could not test DNS")
+        else:
+            console.print("[red]Failed to restart Unbound[/red]")
+        
+        console.print("\n[dim]Press Enter to continue...[/dim]")
+        input()
+
     def uninstall_manager(self) -> None:
         """Uninstall Unbound Manager."""
         console.clear()

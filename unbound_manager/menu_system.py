@@ -1,5 +1,7 @@
 """Interactive menu system for CLI navigation."""
 
+from __future__ import annotations
+
 import sys
 import termios
 import tty
