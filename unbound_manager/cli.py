@@ -618,35 +618,32 @@ class UnboundManagerCLI:
         console.clear()
         
         console.print("┌" + "─" * 58 + "┐")
-        console.print("│              [bold cyan]UPDATE UNBOUND MANAGER[/bold cyan]                   │")
+        console.print("│              [bold cyan]UPDATE MANAGER[/bold cyan]                            │")
         console.print("└" + "─" * 58 + "┘")
         console.print()
+        console.print(f"Current version: [cyan]{APP_VERSION}[/cyan]")
+        console.print()
         
-        console.print(f"Current version: {APP_VERSION}")
-        console.print("\n[yellow]Checking for updates...[/yellow]")
-        
+        # Quick check with short timeout
         try:
             import requests
             response = requests.get(
                 "https://raw.githubusercontent.com/regix1/unbound-manager/main/VERSION",
-                timeout=5
+                timeout=(2, 3)  # (connect timeout, read timeout)
             )
             
             if response.status_code == 200:
                 remote_version = response.text.strip()
-                console.print(f"Latest version:  {remote_version}")
-                
                 if remote_version != APP_VERSION:
-                    console.print("\n[yellow]Update available![/yellow]")
-                    if prompt_yes_no("\nUpdate now?", default=True):
-                        self.perform_update()
+                    console.print(f"[yellow]Update available: {remote_version}[/yellow]")
                 else:
-                    console.print("\n[green]✓ Already up to date[/green]")
-            else:
-                console.print("[yellow]Could not check for updates[/yellow]")
-                
-        except Exception as e:
-            console.print(f"[yellow]Update check failed: {e}[/yellow]")
+                    console.print("[green]✓ Up to date[/green]")
+        except Exception:
+            console.print("[dim]Could not check latest version[/dim]")
+        
+        console.print()
+        if prompt_yes_no("Pull latest from git?", default=False):
+            self.perform_update()
         
         console.print("\n[dim]Press Enter to continue...[/dim]")
         input()
