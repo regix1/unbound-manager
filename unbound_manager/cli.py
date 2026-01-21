@@ -50,13 +50,14 @@ class UnboundManagerCLI:
         self.setup_menu()
     
     def wrap_action(self, func: Callable) -> Callable:
-        """Wrap an action to ensure it pauses before returning (except for menu navigation)."""
+        """Wrap an action to pause after execution (except for menu navigation)."""
         def wrapped():
             try:
                 result = func()
-                # Don't pause for menu navigation returns
-                if result not in (SubMenu.QUIT, SubMenu.RETURN, None, False):
-                    pause()
+                # Only skip pause for explicit navigation returns
+                if result in (SubMenu.QUIT, SubMenu.RETURN, False):
+                    return result
+                pause()
                 return result
             except KeyboardInterrupt:
                 console.print("\n[yellow]Operation cancelled[/yellow]")
