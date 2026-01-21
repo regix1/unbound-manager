@@ -207,12 +207,12 @@ DNS_PROVIDERS = {
 
 # Recommended providers shown first in selection menu
 DNS_PROVIDER_ORDER = [
+    "none",
     "quad9",
     "cloudflare",
     "cloudflare_malware",
     "google",
     "adguard",
-    "none",
     "cloudflare_family",
     "adguard_family",
     "quad9_unsecured",

@@ -81,7 +81,7 @@ class UnboundInstaller:
         console.print()
         
         valid_choices = ["r", "q"] + [str(i) for i in range(1, len(versions) + 1)]
-        choice = Prompt.ask("Select version", choices=valid_choices, default="1", show_choices=False)
+        choice = Prompt.ask("Select version", choices=valid_choices, default="r", show_choices=False)
         
         if choice == "q":
             return SubMenu.QUIT
