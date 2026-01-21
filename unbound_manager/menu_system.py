@@ -444,7 +444,9 @@ class SubMenu:
                         console.clear()
                         try:
                             result = action()
-                            pause()
+                            # Only pause if action produced output (not menu navigation)
+                            if result not in (SubMenu.QUIT, SubMenu.RETURN, None, False):
+                                pause()
                             return result
                         except KeyboardInterrupt:
                             console.print("\n[yellow]Cancelled[/yellow]")

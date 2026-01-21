@@ -29,9 +29,21 @@ Unbound Manager takes the pain out of running your own DNS server. It handles th
 
 ## Installation
 
-Clone the repo and install:
+### Prerequisites
+
+First, make sure you have Python 3, pip, and git installed:
 
 ```bash
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv git
+```
+
+### Install Unbound Manager
+
+Clone the repo and install as root:
+
+```bash
+sudo -i
 git clone https://github.com/regix1/unbound-manager.git
 cd unbound-manager
 pip3 install .
@@ -39,7 +51,7 @@ pip3 install .
 
 That's it. Both `pip3 install .` and `pip3 install -e .` work fine. The manager can update itself either way.
 
-> **Note:** You need root privileges. Run commands with `sudo` if you're not already root.
+> **Note about PEP 668:** On Ubuntu 22.04+ and Debian 12+, you may see an "externally-managed-environment" error. Since unbound-manager runs as root and manages system services, installing as root (with `sudo -i` first) avoids this issue. Alternatively, you can use `pip3 install . --break-system-packages` if you prefer.
 
 ## Getting Started
 
