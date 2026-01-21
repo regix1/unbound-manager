@@ -10,10 +10,11 @@ from typing import List, Optional
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.prompt import Prompt, IntPrompt
+from rich.prompt import Prompt
 
 from .constants import UNBOUND_DIR, BACKUP_DIR
 from .utils import ensure_directory, prompt_yes_no
+from .menu_system import SubMenu
 
 console = Console()
 
@@ -53,44 +54,53 @@ class BackupManager:
         return backups
     
     def restore_backup(self) -> None:
-        """Interactive backup restoration."""
-        console.print(Panel.fit(
-            "[bold cyan]Restore Configuration Backup[/bold cyan]",
-            border_style="cyan"
-        ))
+        """Interactive backup restoration with standard navigation."""
+        console.clear()
+        
+        # Header
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│              [bold cyan]RESTORE BACKUP[/bold cyan]                           │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
         
         backups = self.list_backups()
         
         if not backups:
             console.print("[yellow]No backups found[/yellow]")
+            console.print("\n[dim]Press Enter to continue...[/dim]")
+            input()
             return
         
         # Display available backups
-        table = Table(title="Available Backups", title_style="bold cyan")
+        table = Table(show_header=True, header_style="bold cyan", box=None)
         table.add_column("#", style="cyan", width=3)
         table.add_column("Filename")
         table.add_column("Date", justify="center")
         table.add_column("Size", justify="right")
         
-        for i, backup in enumerate(backups[:10], 1):  # Show only last 10
+        for i, backup in enumerate(backups[:10], 1):
             stats = backup.stat()
             date = datetime.fromtimestamp(stats.st_mtime).strftime("%Y-%m-%d %H:%M")
             size = self._format_size(stats.st_size)
             table.add_row(str(i), backup.name, date, size)
         
         console.print(table)
+        console.print()
+        console.print("  ─" * 20)
+        console.print("  [r] Return to menu")
+        console.print("  [q] Quit")
+        console.print()
         
-        # Select backup
-        choice = IntPrompt.ask(
-            "Select backup to restore (0 to cancel)",
-            choices=[str(i) for i in range(len(backups[:10]) + 1)]
-        )
+        # Get selection
+        valid_choices = ["r", "q"] + [str(i) for i in range(1, min(len(backups), 10) + 1)]
+        choice = Prompt.ask("Select backup #", choices=valid_choices, default="r", show_choices=False)
         
-        if choice == 0:
-            console.print("[yellow]Restore cancelled[/yellow]")
+        if choice == "q":
+            return False
+        if choice == "r":
             return
         
-        selected_backup = backups[choice - 1]
+        selected_backup = backups[int(choice) - 1]
         
         if not prompt_yes_no(f"Restore from {selected_backup.name}?", default=False):
             console.print("[yellow]Restore cancelled[/yellow]")

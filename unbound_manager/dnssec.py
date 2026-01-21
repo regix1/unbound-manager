@@ -11,6 +11,7 @@ from rich.prompt import Prompt
 
 from .constants import UNBOUND_DIR, ROOT_KEY, ROOT_HINTS, ROOT_HINTS_URL, ROOT_HINTS_BACKUP_URL
 from .utils import run_command, download_file, set_file_permissions, prompt_yes_no
+from .menu_system import SubMenu, create_submenu
 
 console = Console()
 
@@ -204,39 +205,18 @@ class DNSSECManager:
             console.print("[green]✓[/green] DNSSEC correctly rejected invalid signatures")
     
     def manage_dnssec(self) -> None:
-        """Interactive DNSSEC management."""
-        console.print(Panel.fit(
-            "[bold cyan]DNSSEC Management[/bold cyan]",
-            border_style="cyan"
-        ))
+        """Interactive DNSSEC management using standardized submenu."""
         
-        options = [
-            "Update root hints",
-            "Update trust anchor",
-            "Regenerate control keys",
-            "Test DNSSEC validation",
-            "View DNSSEC status",
-            "Back to main menu",
-        ]
+        result = create_submenu("DNSSEC Management", [
+            ("Update Root Hints", self.setup_root_hints),
+            ("Update Trust Anchor", self.setup_trust_anchor),
+            ("Regenerate Keys", self.generate_control_keys),
+            ("Test Validation", self.test_dnssec_validation),
+            ("View Status", self.show_dnssec_status),
+        ])
         
-        for i, option in enumerate(options, 1):
-            console.print(f"[green]{i}[/green]. {option}")
-        
-        choice = Prompt.ask(
-            "Select option",
-            choices=[str(i) for i in range(1, len(options) + 1)]
-        )
-        
-        if choice == "1":
-            self.setup_root_hints()
-        elif choice == "2":
-            self.setup_trust_anchor()
-        elif choice == "3":
-            self.generate_control_keys()
-        elif choice == "4":
-            self.test_dnssec_validation()
-        elif choice == "5":
-            self.show_dnssec_status()
+        if result == SubMenu.QUIT:
+            return False
     
     def show_dnssec_status(self) -> None:
         """Show DNSSEC configuration status."""

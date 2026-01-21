@@ -28,7 +28,7 @@ from .dnssec import DNSSECManager
 from .troubleshooter import Troubleshooter
 from .tester import UnboundTester
 from .backup import BackupManager
-from .menu_system import InteractiveMenu, MenuItem, MenuCategory
+from .menu_system import InteractiveMenu, MenuItem, MenuCategory, SubMenu, create_submenu
 
 console = Console()
 
@@ -366,97 +366,84 @@ class UnboundManagerCLI:
             console.print("  [yellow]Cache statistics unavailable[/yellow]")
     
     def manage_services_quick(self) -> None:
-        """Quick service management."""
+        """Quick service management using standardized submenu."""
         from .utils import restart_service
         
-        console.clear()
-        
-        # Header
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│                  [bold cyan]SERVICE CONTROL[/bold cyan]                       │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
-        
-        # Show current status
+        # Get current status for display
         unbound_running = check_service_status(UNBOUND_SERVICE)
         redis_running = check_service_status(REDIS_SERVICE)
         
-        console.print("[bold]Current Status:[/bold]")
-        console.print(f"  Unbound : {'[green]● Running[/green]' if unbound_running else '[red]○ Stopped[/red]'}")
-        console.print(f"  Redis   : {'[green]● Running[/green]' if redis_running else '[red]○ Stopped[/red]'}")
-        console.print()
-        console.print("─" * 60)
-        console.print()
+        status_desc = (
+            f"Unbound: {'● Running' if unbound_running else '○ Stopped'} | "
+            f"Redis: {'● Running' if redis_running else '○ Stopped'}"
+        )
         
-        # Quick actions
-        if not unbound_running:
-            console.print("  [1] Start All Services")
-        else:
-            console.print("  [1] Restart All Services")
-        
-        console.print("  [2] Stop All Services")
-        console.print("  [3] Advanced Service Control")
-        console.print("  [0] Back to Main Menu")
-        console.print()
-        
-        choice = Prompt.ask("Select action", choices=["0", "1", "2", "3"], default="0")
-        
-        if choice == "1":
-            console.print("\n[cyan]Starting services...[/cyan]")
-            with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
-                task = progress.add_task("Starting Redis...", total=None)
-                restart_service(REDIS_SERVICE)
-                progress.update(task, description="Starting Unbound...")
-                restart_service(UNBOUND_SERVICE)
-                progress.update(task, completed=True)
+        def start_all():
+            console.print("[cyan]Starting services...[/cyan]")
+            restart_service(REDIS_SERVICE)
+            restart_service(UNBOUND_SERVICE)
             console.print("[green]✓[/green] Services started")
-            time.sleep(2)
-        elif choice == "2":
-            console.print("\n[cyan]Stopping services...[/cyan]")
+        
+        def stop_all():
+            console.print("[cyan]Stopping services...[/cyan]")
             run_command(["systemctl", "stop", UNBOUND_SERVICE])
             run_command(["systemctl", "stop", REDIS_SERVICE])
             console.print("[yellow]Services stopped[/yellow]")
-            time.sleep(2)
-        elif choice == "3":
-            self.manage_services_advanced()
+        
+        menu = SubMenu("Service Control", status_desc)
+        menu.add_option("Start All" if not unbound_running else "Restart All", start_all, "s")
+        menu.add_option("Stop All", stop_all, "x")
+        menu.add_option("Advanced Options", self.manage_services_advanced, "a")
+        
+        result = menu.run()
+        if result == SubMenu.QUIT:
+            return False
     
     def manage_services_advanced(self) -> None:
-        """Advanced service management."""
+        """Advanced service management using standardized submenu."""
         from .utils import restart_service
         
-        console.clear()
+        def start_unbound():
+            console.print("[cyan]Starting Unbound...[/cyan]")
+            restart_service(UNBOUND_SERVICE)
+            console.print("[green]✓[/green] Unbound started")
         
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│              [bold cyan]ADVANCED SERVICE CONTROL[/bold cyan]                  │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
+        def stop_unbound():
+            console.print("[cyan]Stopping Unbound...[/cyan]")
+            run_command(["systemctl", "stop", UNBOUND_SERVICE])
+            console.print("[yellow]Unbound stopped[/yellow]")
         
-        console.print("  [1] Start Unbound")
-        console.print("  [2] Stop Unbound")
-        console.print("  [3] Restart Unbound")
-        console.print("  [4] Start Redis")
-        console.print("  [5] Stop Redis")
-        console.print("  [6] Restart Redis")
-        console.print("  [0] Back")
-        console.print()
+        def restart_unbound():
+            console.print("[cyan]Restarting Unbound...[/cyan]")
+            restart_service(UNBOUND_SERVICE)
+            console.print("[green]✓[/green] Unbound restarted")
         
-        choice = Prompt.ask("Select action", choices=["0", "1", "2", "3", "4", "5", "6"])
+        def start_redis():
+            console.print("[cyan]Starting Redis...[/cyan]")
+            restart_service(REDIS_SERVICE)
+            console.print("[green]✓[/green] Redis started")
         
-        actions = {
-            "1": ("Starting Unbound...", lambda: restart_service(UNBOUND_SERVICE)),
-            "2": ("Stopping Unbound...", lambda: run_command(["systemctl", "stop", UNBOUND_SERVICE])),
-            "3": ("Restarting Unbound...", lambda: restart_service(UNBOUND_SERVICE)),
-            "4": ("Starting Redis...", lambda: restart_service(REDIS_SERVICE)),
-            "5": ("Stopping Redis...", lambda: run_command(["systemctl", "stop", REDIS_SERVICE])),
-            "6": ("Restarting Redis...", lambda: restart_service(REDIS_SERVICE)),
-        }
+        def stop_redis():
+            console.print("[cyan]Stopping Redis...[/cyan]")
+            run_command(["systemctl", "stop", REDIS_SERVICE])
+            console.print("[yellow]Redis stopped[/yellow]")
         
-        if choice != "0":
-            msg, action = actions[choice]
-            console.print(f"\n[cyan]{msg}[/cyan]")
-            action()
-            console.print("[green]✓[/green] Action completed")
-            time.sleep(2)
+        def restart_redis():
+            console.print("[cyan]Restarting Redis...[/cyan]")
+            restart_service(REDIS_SERVICE)
+            console.print("[green]✓[/green] Redis restarted")
+        
+        result = create_submenu("Advanced Service Control", [
+            ("Start Unbound", start_unbound),
+            ("Stop Unbound", stop_unbound),
+            ("Restart Unbound", restart_unbound),
+            ("Start Redis", start_redis),
+            ("Stop Redis", stop_redis),
+            ("Restart Redis", restart_redis),
+        ])
+        
+        if result == SubMenu.QUIT:
+            return False
     
     def backup_configuration_interactive(self) -> None:
         """Interactive backup creation."""
@@ -508,64 +495,55 @@ class UnboundManagerCLI:
         input()
     
     def view_logs_interactive(self) -> None:
-        """Interactive log viewer."""
-        console.clear()
+        """Interactive log viewer using standardized submenu."""
         
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│                    [bold cyan]VIEW LOGS[/bold cyan]                          │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
-        
-        console.print("  [1] Last 50 lines")
-        console.print("  [2] Last 100 lines")
-        console.print("  [3] Last 200 lines")
-        console.print("  [4] Follow logs (real-time)")
-        console.print("  [0] Back")
-        console.print()
-        
-        choice = Prompt.ask("Select option", choices=["0", "1", "2", "3", "4"])
-        
-        if choice == "1":
+        def view_50():
             self.troubleshooter.view_logs(50)
-        elif choice == "2":
+        
+        def view_100():
             self.troubleshooter.view_logs(100)
-        elif choice == "3":
+        
+        def view_200():
             self.troubleshooter.view_logs(200)
-        elif choice == "4":
-            console.print("\n[cyan]Following logs... Press Ctrl+C to stop[/cyan]\n")
+        
+        def follow_logs():
+            console.print("[cyan]Following logs... Press Ctrl+C to stop[/cyan]\n")
             try:
                 run_command(["journalctl", "-u", UNBOUND_SERVICE, "-f"], check=False, capture_output=False)
             except KeyboardInterrupt:
                 pass
         
-        if choice != "0":
-            console.print("\n[dim]Press Enter to continue...[/dim]")
-            input()
+        result = create_submenu("View Logs", [
+            ("Last 50 lines", view_50),
+            ("Last 100 lines", view_100),
+            ("Last 200 lines", view_200),
+            ("Follow (real-time)", follow_logs, "f"),
+        ])
+        
+        if result == SubMenu.QUIT:
+            return False
     
     def installation_menu(self) -> None:
-        """Installation submenu."""
-        console.clear()
+        """Installation submenu using standardized submenu."""
         
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│              [bold cyan]INSTALLATION MANAGER[/bold cyan]                      │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
-        
-        console.print("  [1] Fresh Installation")
-        console.print("  [2] Fix Existing Installation")
-        console.print("  [3] Reinstall Unbound")
-        console.print("  [0] Back")
-        console.print()
-        
-        choice = Prompt.ask("Select option", choices=["0", "1", "2", "3"])
-        
-        if choice == "1":
+        def fresh_install():
             self.installer.install_unbound()
-        elif choice == "2":
+        
+        def fix_install():
             self.installer.fix_existing_installation()
-        elif choice == "3":
+        
+        def reinstall():
             if prompt_yes_no("This will reinstall Unbound. Continue?", default=False):
                 self.installer.install_unbound()
+        
+        result = create_submenu("Installation Manager", [
+            ("Fresh Install", fresh_install),
+            ("Fix Installation", fix_install),
+            ("Reinstall Unbound", reinstall),
+        ])
+        
+        if result == SubMenu.QUIT:
+            return False
     
     def show_help(self) -> None:
         """Show help information."""

@@ -27,6 +27,7 @@ from .utils import (
 from .config_manager import ConfigManager
 from .redis_manager import RedisManager
 from .dnssec import DNSSECManager
+from .menu_system import SubMenu
 
 console = Console()
 
@@ -61,23 +62,31 @@ class UnboundInstaller:
             return ["1.22.0", "1.21.1", "1.21.0", "1.20.0", "1.19.3"]
     
     def select_version(self) -> str:
-        """Let user select an Unbound version."""
+        """Let user select an Unbound version with standard navigation."""
         versions = self.get_available_versions()
         
-        console.print(Panel.fit(
-            "[bold cyan]Available Unbound Versions[/bold cyan]",
-            border_style="cyan"
-        ))
+        console.clear()
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│          [bold cyan]SELECT UNBOUND VERSION[/bold cyan]                       │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
         
         for i, version in enumerate(versions, 1):
-            console.print(f"  [green]{i}[/green]. {version}")
+            console.print(f"  [{i}] {version}")
         
         console.print()
-        choice = Prompt.ask(
-            "Select a version",
-            choices=[str(i) for i in range(1, len(versions) + 1)],
-            default="1"
-        )
+        console.print("  ─" * 20)
+        console.print("  [r] Return to menu")
+        console.print("  [q] Quit")
+        console.print()
+        
+        valid_choices = ["r", "q"] + [str(i) for i in range(1, len(versions) + 1)]
+        choice = Prompt.ask("Select version", choices=valid_choices, default="1", show_choices=False)
+        
+        if choice == "q":
+            return SubMenu.QUIT
+        if choice == "r":
+            return SubMenu.RETURN
         
         selected = versions[int(choice) - 1]
         console.print(f"[green]✓[/green] Selected Unbound version: [bold]{selected}[/bold]")

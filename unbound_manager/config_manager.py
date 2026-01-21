@@ -21,6 +21,7 @@ from rich.text import Text
 
 from .constants import UNBOUND_DIR, UNBOUND_CONF, UNBOUND_CONF_D, DEFAULT_CONFIG
 from .utils import set_file_permissions, ensure_directory, prompt_yes_no, get_server_ip
+from .menu_system import SubMenu, create_submenu
 
 console = Console()
 
@@ -168,37 +169,22 @@ class ConfigManager:
         set_file_permissions(output_path)
     
     def edit_configuration_interactive(self, file_name: str) -> None:
-        """Interactive configuration editor."""
+        """Interactive configuration editor using standardized submenu."""
         file_path = UNBOUND_CONF_D / file_name
         
         if not file_path.exists():
             console.print(f"[red]Configuration file {file_name} does not exist[/red]")
             return
         
-        console.print(Panel.fit(
-            f"[bold cyan]Edit {file_name}[/bold cyan]\n\n"
-            "Choose editing method:",
-            border_style="cyan"
-        ))
+        result = create_submenu(f"Edit {file_name}", [
+            ("Quick Edit", lambda: self.quick_edit_config(file_name)),
+            ("Open in Nano", lambda: self.open_in_editor(file_path, "nano")),
+            ("Open in Vim", lambda: self.open_in_editor(file_path, "vim")),
+            ("View Only", lambda: self.view_configuration_file(file_path)),
+        ])
         
-        console.print("[green]1[/green]. Quick Edit (modify common parameters)")
-        console.print("[green]2[/green]. Text Editor (nano)")
-        console.print("[green]3[/green]. Advanced Editor (vim)")
-        console.print("[green]4[/green]. View Only")
-        console.print("[green]0[/green]. Cancel")
-        
-        choice = Prompt.ask("Select option", choices=["0", "1", "2", "3", "4"], default="1")
-        
-        if choice == "0":
-            return
-        elif choice == "1":
-            self.quick_edit_config(file_name)
-        elif choice == "2":
-            self.open_in_editor(file_path, "nano")
-        elif choice == "3":
-            self.open_in_editor(file_path, "vim")
-        elif choice == "4":
-            self.view_configuration_file(file_path)
+        if result == SubMenu.QUIT:
+            return False
     
     def quick_edit_config(self, file_name: str) -> None:
         """Quick edit common configuration parameters."""
@@ -365,13 +351,7 @@ class ConfigManager:
         console.print(Panel(syntax, title=f"[bold cyan]{file_path.name}[/bold cyan]", border_style="cyan"))
     
     def edit_access_control(self) -> None:
-        """Edit access control rules."""
-        console.print(Panel.fit(
-            "[bold cyan]Access Control Configuration[/bold cyan]\n\n"
-            "Configure which networks can use this DNS server",
-            border_style="cyan"
-        ))
-        
+        """Edit access control rules using standardized submenu."""
         server_conf = UNBOUND_CONF_D / "server.conf"
         
         # Read current access control rules
@@ -385,48 +365,45 @@ class ConfigManager:
                             current_rules.append((parts[0], parts[1]))
         
         # Display current rules
-        console.print("[cyan]Current Access Control Rules:[/cyan]")
-        table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("#", style="cyan", width=5)
-        table.add_column("Network", style="yellow")
-        table.add_column("Action", style="green")
-        
-        for i, (network, action) in enumerate(current_rules, 1):
-            table.add_row(str(i), network, action)
-        
-        console.print(table)
+        console.clear()
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│           [bold cyan]ACCESS CONTROL RULES[/bold cyan]                        │")
+        console.print("└" + "─" * 58 + "┘")
         console.print()
         
-        # Edit options
-        console.print("[green]1[/green]. Add new rule")
-        console.print("[green]2[/green]. Remove rule")
-        console.print("[green]3[/green]. Reset to defaults")
-        console.print("[green]0[/green]. Back")
-        
-        choice = Prompt.ask("Select option", choices=["0", "1", "2", "3"])
-        
-        if choice == "1":
-            # Add new rule
-            network = Prompt.ask("Enter network (e.g., 192.168.1.0/24)")
-            action = Prompt.ask("Action", choices=["allow", "deny", "refuse"], default="allow")
+        if current_rules:
+            table = Table(show_header=True, header_style="bold magenta", box=None)
+            table.add_column("#", style="cyan", width=5)
+            table.add_column("Network", style="yellow")
+            table.add_column("Action", style="green")
             
+            for i, (network, action) in enumerate(current_rules, 1):
+                table.add_row(str(i), network, action)
+            
+            console.print(table)
+        else:
+            console.print("[yellow]No rules configured[/yellow]")
+        
+        console.print()
+        
+        def add_rule():
+            network = Prompt.ask("Network (e.g., 192.168.1.0/24)")
+            action = Prompt.ask("Action", choices=["allow", "deny", "refuse"], default="allow")
             current_rules.append((network, action))
             self._update_access_control(current_rules)
-            
-        elif choice == "2":
-            # Remove rule
-            if current_rules:
-                rule_num = IntPrompt.ask(
-                    "Enter rule number to remove",
-                    choices=[str(i) for i in range(1, len(current_rules) + 1)]
-                )
-                del current_rules[rule_num - 1]
-                self._update_access_control(current_rules)
-            else:
+        
+        def remove_rule():
+            if not current_rules:
                 console.print("[yellow]No rules to remove[/yellow]")
-                
-        elif choice == "3":
-            # Reset to defaults
+                return
+            rule_num = IntPrompt.ask(
+                "Rule # to remove",
+                choices=[str(i) for i in range(1, len(current_rules) + 1)]
+            )
+            del current_rules[rule_num - 1]
+            self._update_access_control(current_rules)
+        
+        def reset_rules():
             default_rules = [
                 ("127.0.0.0/8", "allow"),
                 ("10.0.0.0/8", "allow"),
@@ -434,6 +411,27 @@ class ConfigManager:
                 ("192.168.0.0/16", "allow"),
             ]
             self._update_access_control(default_rules)
+        
+        # Show options after the table
+        console.print("  [1] Add Rule")
+        console.print("  [2] Remove Rule")
+        console.print("  [3] Reset Defaults")
+        console.print()
+        console.print("  ─" * 20)
+        console.print("  [r] Return to menu")
+        console.print("  [q] Quit")
+        console.print()
+        
+        choice = Prompt.ask("Select", choices=["1", "2", "3", "r", "q"], default="r", show_choices=False)
+        
+        if choice == "q":
+            return False
+        elif choice == "1":
+            add_rule()
+        elif choice == "2":
+            remove_rule()
+        elif choice == "3":
+            reset_rules()
     
     def _update_access_control(self, rules: List[tuple]) -> None:
         """Update access control rules in configuration."""
@@ -593,45 +591,20 @@ class ConfigManager:
             return False
     
     def manage_configuration(self) -> None:
-        """Interactive configuration management."""
-        console.print(Panel.fit(
-            "[bold cyan]Configuration Management[/bold cyan]",
-            border_style="cyan"
-        ))
+        """Interactive configuration management using standardized submenu."""
         
-        options = [
-            "View current configuration",
-            "Edit server configuration",
-            "Edit DNSSEC configuration", 
-            "Edit Redis configuration",
-            "Edit access control rules",
-            "Validate configuration",
-            "Reset to defaults",
-            "Back to main menu",
-        ]
+        result = create_submenu("Configuration", [
+            ("View Config", self.view_configuration),
+            ("Edit Server", lambda: self.edit_configuration_interactive("server.conf")),
+            ("Edit DNSSEC", lambda: self.edit_configuration_interactive("dnssec.conf")),
+            ("Edit Redis", lambda: self.edit_configuration_interactive("redis.conf")),
+            ("Access Control", self.edit_access_control),
+            ("Validate", self.validate_configuration),
+            ("Reset Defaults", self.reset_to_defaults),
+        ])
         
-        for i, option in enumerate(options, 1):
-            console.print(f"[green]{i}[/green]. {option}")
-        
-        choice = IntPrompt.ask(
-            "Select option",
-            choices=[str(i) for i in range(1, len(options) + 1)]
-        )
-        
-        if choice == 1:
-            self.view_configuration()
-        elif choice == 2:
-            self.edit_configuration_interactive("server.conf")
-        elif choice == 3:
-            self.edit_configuration_interactive("dnssec.conf")
-        elif choice == 4:
-            self.edit_configuration_interactive("redis.conf")
-        elif choice == 5:
-            self.edit_access_control()
-        elif choice == 6:
-            self.validate_configuration()
-        elif choice == 7:
-            self.reset_to_defaults()
+        if result == SubMenu.QUIT:
+            return False
     
     def view_configuration(self) -> None:
         """View current configuration files."""
@@ -691,42 +664,46 @@ class ConfigManager:
 
     
     def select_dns_upstream(self) -> dict:
-        """Interactive DNS upstream provider selection."""
+        """Interactive DNS upstream provider selection with standard navigation."""
         from .constants import DNS_PROVIDERS, DNS_PROVIDER_ORDER
         
-        console.print(Panel.fit(
-            "[bold cyan]DNS Upstream Configuration[/bold cyan]\n\n"
-            "Choose how Unbound should resolve DNS queries.\n"
-            "[green]Encrypted (DoT)[/green] = Your DNS queries are protected from eavesdropping\n"
-            "[yellow]Unencrypted[/yellow] = Faster but queries visible to your ISP",
-            border_style="cyan"
-        ))
+        console.clear()
+        console.print("┌" + "─" * 58 + "┐")
+        console.print("│           [bold cyan]SELECT DNS PROVIDER[/bold cyan]                         │")
+        console.print("└" + "─" * 58 + "┘")
+        console.print()
+        console.print("[dim]Encrypted (DoT) = Protected from eavesdropping[/dim]")
+        console.print("[dim]Unencrypted = Faster but visible to ISP[/dim]")
+        console.print()
         
-        # Display options
-        console.print("\n[bold]Available DNS Providers:[/bold]\n")
-        
+        # Display options in a table
         table = Table(show_header=True, header_style="bold magenta", box=None)
         table.add_column("#", style="cyan", width=3)
-        table.add_column("Provider", width=30)
+        table.add_column("Provider", width=25)
         table.add_column("Security", width=12)
-        table.add_column("Description", width=40)
         
         for i, provider_key in enumerate(DNS_PROVIDER_ORDER, 1):
             provider = DNS_PROVIDERS[provider_key]
             security = "[green]Encrypted[/green]" if provider["encrypted"] else "[yellow]Unencrypted[/yellow]"
             if provider_key == "none":
                 security = "[blue]Direct[/blue]"
-            table.add_row(str(i), provider["name"], security, provider["description"])
+            table.add_row(str(i), provider["name"], security)
         
         console.print(table)
         console.print()
+        console.print("  ─" * 20)
+        console.print("  [r] Return to menu")
+        console.print("  [q] Quit")
+        console.print()
         
         # Get selection
-        choice = Prompt.ask(
-            "Select DNS provider",
-            choices=[str(i) for i in range(1, len(DNS_PROVIDER_ORDER) + 1)],
-            default="1"
-        )
+        valid_choices = ["r", "q"] + [str(i) for i in range(1, len(DNS_PROVIDER_ORDER) + 1)]
+        choice = Prompt.ask("Select provider", choices=valid_choices, default="1", show_choices=False)
+        
+        if choice == "q":
+            return SubMenu.QUIT
+        if choice == "r":
+            return SubMenu.RETURN
         
         selected_key = DNS_PROVIDER_ORDER[int(choice) - 1]
         selected_provider = DNS_PROVIDERS[selected_key].copy()

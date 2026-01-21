@@ -343,3 +343,162 @@ class SimpleMenu:
             return action()
         
         return None
+
+
+class SubMenu:
+    """Standardized submenu for consistent CLI navigation.
+    
+    Features:
+    - Consistent header styling
+    - Auto-added return (r) and quit (q) options
+    - Numbered options for quick selection
+    - Clean, concise option display
+    
+    Usage:
+        menu = SubMenu("Service Control")
+        menu.add_option("Start All", start_all_services)
+        menu.add_option("Stop All", stop_all_services)
+        result = menu.run()
+        
+        if result == SubMenu.QUIT:
+            return False  # Exit app
+        elif result == SubMenu.RETURN:
+            return  # Go back
+    """
+    
+    QUIT = "QUIT"
+    RETURN = "RETURN"
+    
+    def __init__(self, title: str, description: str = ""):
+        """Initialize submenu.
+        
+        Args:
+            title: Menu title displayed in header
+            description: Optional description shown below title
+        """
+        self.title = title
+        self.description = description
+        self.options: list = []  # List of (label, action, key)
+    
+    def add_option(self, label: str, action=None, key: str = None):
+        """Add a menu option.
+        
+        Args:
+            label: Short, clear label (e.g., "Start All", "View Logs")
+            action: Callable to execute or None for display-only
+            key: Optional single-char shortcut key
+        """
+        self.options.append((label, action, key))
+    
+    def display(self) -> None:
+        """Display the menu."""
+        console.clear()
+        
+        # Header
+        title_centered = self.title.upper().center(54)
+        console.print("┌" + "─" * 58 + "┐")
+        console.print(f"│  [bold cyan]{title_centered}[/bold cyan]  │")
+        console.print("└" + "─" * 58 + "┘")
+        
+        if self.description:
+            console.print(f"\n[dim]{self.description}[/dim]")
+        
+        console.print()
+        
+        # Options
+        for i, (label, action, key) in enumerate(self.options, 1):
+            key_hint = f" ({key})" if key else ""
+            console.print(f"  [{i}] {label}{key_hint}")
+        
+        # Separator and navigation options
+        console.print()
+        console.print("  ─" * 20)
+        console.print("  [r] Return to menu")
+        console.print("  [q] Quit")
+        console.print()
+    
+    def run(self):
+        """Run the menu and handle selection.
+        
+        Returns:
+            - SubMenu.QUIT: User wants to quit the app
+            - SubMenu.RETURN: User wants to go back
+            - Result of action callable
+            - None if action has no return
+        """
+        while True:
+            self.display()
+            
+            # Build valid choices
+            valid = ["r", "q"] + [str(i) for i in range(1, len(self.options) + 1)]
+            
+            # Add shortcut keys
+            for _, _, key in self.options:
+                if key:
+                    valid.append(key.lower())
+            
+            from rich.prompt import Prompt
+            choice = Prompt.ask("Select", choices=valid, default="r", show_choices=False)
+            
+            # Handle navigation
+            if choice.lower() == "q":
+                return SubMenu.QUIT
+            if choice.lower() == "r":
+                return SubMenu.RETURN
+            
+            # Handle shortcut keys
+            for i, (label, action, key) in enumerate(self.options):
+                if key and choice.lower() == key.lower():
+                    choice = str(i + 1)
+                    break
+            
+            # Handle numbered selection
+            if choice.isdigit():
+                idx = int(choice) - 1
+                if 0 <= idx < len(self.options):
+                    label, action, _ = self.options[idx]
+                    if action:
+                        console.clear()
+                        try:
+                            result = action()
+                            console.print("\n[dim]Press Enter to continue...[/dim]")
+                            input()
+                            return result
+                        except KeyboardInterrupt:
+                            console.print("\n[yellow]Cancelled[/yellow]")
+                            console.print("[dim]Press Enter to continue...[/dim]")
+                            input()
+                        except Exception as e:
+                            console.print(f"\n[red]Error: {e}[/red]")
+                            console.print("[dim]Press Enter to continue...[/dim]")
+                            input()
+            
+            # Invalid choice - loop again
+
+
+def create_submenu(title: str, options: list, description: str = ""):
+    """Create and run a submenu with the given options.
+    
+    This is a convenience function for simple menus.
+    
+    Args:
+        title: Menu title
+        options: List of tuples (label, action) or (label, action, key)
+        description: Optional description
+        
+    Returns:
+        SubMenu result (QUIT, RETURN, or action result)
+    
+    Example:
+        result = create_submenu("Service Control", [
+            ("Start All", start_services),
+            ("Stop All", stop_services, "s"),
+        ])
+    """
+    menu = SubMenu(title, description)
+    for opt in options:
+        if len(opt) == 2:
+            menu.add_option(opt[0], opt[1])
+        else:
+            menu.add_option(opt[0], opt[1], opt[2])
+    return menu.run()
