@@ -89,139 +89,139 @@ class UnboundManagerCLI:
     
     def setup_menu(self) -> None:
         """Setup the interactive menu structure."""
-        # Service Control (most important)
+        # ===== TOP-LEVEL QUICK ACCESS =====
+        
+        # Service Control - most used
         self.menu.add_item(MenuItem(
-            "Service Control",
+            "Services",
             self.manage_services_quick,
             prefix="[S]",
-            description="Start/Stop DNS services",
+            description="Start/Stop/Restart DNS services",
             key="s"
         ))
         
+        # View - Status, Stats, Logs combined
         self.menu.add_item(MenuItem(
-            "System Status",
-            self.show_detailed_status,
-            prefix="[T]",
-            description="View status and statistics",
-            key="t"
+            "View",
+            self.view_menu,
+            prefix="[V]",
+            description="Status, statistics, and logs",
+            key="v"
         ))
         
-        self.menu.add_item(MenuItem(
-            "View Logs",
-            lambda: self.view_logs_interactive(),
-            prefix="[L]",
-            description="View system logs",
-            key="l"
-        ))
-        
-        # Configuration category
+        # ===== CONFIGURATION =====
         config_category = MenuCategory("Configuration", prefix="[C]")
         config_category.add_item(MenuItem(
-            "Edit Configuration",
+            "DNS Upstream",
+            self.change_dns_upstream,
+            description="Change DNS provider"
+        ))
+        config_category.add_item(MenuItem(
+            "Server Settings",
             self.wrap_action(self.config_manager.manage_configuration),
-            description="Modify DNS settings"
+            description="Edit server config"
         ))
         config_category.add_item(MenuItem(
             "Access Control",
             self.wrap_action(self.config_manager.edit_access_control),
-            description="Manage allowed networks"
-        ))
-        config_category.add_item(MenuItem(
-            "DNS Upstream",
-            self.change_dns_upstream,
-            description="Change DNS provider (encrypted/unencrypted)"
+            description="Allowed networks"
         ))
         config_category.add_item(MenuItem(
             "Redis Cache",
             self.wrap_action(self.redis_manager.configure_redis),
-            description="Configure caching"
+            description="Cache settings"
         ))
         config_category.add_item(MenuItem(
-            "DNSSEC Settings",
+            "DNSSEC",
             self.wrap_action(self.dnssec_manager.manage_dnssec),
-            description="Security configuration"
+            description="Security settings"
         ))
         self.menu.add_category(config_category)
         
-        # Maintenance category
-        maintenance_category = MenuCategory("Maintenance", prefix="[M]")
-        maintenance_category.add_item(MenuItem(
-            "Backup Configuration",
-            self.backup_configuration_interactive,
-            description="Create configuration backup"
-        ))
-        maintenance_category.add_item(MenuItem(
-            "Restore Configuration",
-            self.wrap_action(self.backup_manager.restore_backup),
-            description="Restore from backup"
-        ))
-        maintenance_category.add_item(MenuItem(
-            "Update Unbound",
-            self.wrap_action(self.installer.update_unbound),
-            description="Update DNS server version"
-        ))
-        maintenance_category.add_item(MenuItem(
-            "Clean Backups",
-            self.cleanup_backups,
-            description="Remove old backups"
-        ))
-        self.menu.add_category(maintenance_category)
-        
-        # Diagnostics category
-        diagnostic_category = MenuCategory("Diagnostics", prefix="[D]")
-        diagnostic_category.add_item(MenuItem(
+        # ===== TESTING & DIAGNOSTICS =====
+        test_category = MenuCategory("Testing", prefix="[T]")
+        test_category.add_item(MenuItem(
             "Run Diagnostics",
             self.wrap_action(self.troubleshooter.run_diagnostics),
             description="Check for issues"
         ))
-        diagnostic_category.add_item(MenuItem(
-            "Test DNS Resolution",
+        test_category.add_item(MenuItem(
+            "Test DNS",
             self.wrap_action(self.tester.run_all_tests),
-            description="Test DNS functionality"
+            description="DNS resolution tests"
         ))
-        diagnostic_category.add_item(MenuItem(
-            "Performance Benchmark",
+        test_category.add_item(MenuItem(
+            "Performance",
             self.wrap_action(lambda: self.tester.test_performance(100)),
-            description="Test query performance"
+            description="Query benchmark"
         ))
-        diagnostic_category.add_item(MenuItem(
-            "Network Connectivity",
+        test_category.add_item(MenuItem(
+            "Network",
             self.wrap_action(self.troubleshooter.check_connectivity),
-            description="Check network status"
+            description="Connectivity check"
         ))
-        self.menu.add_category(diagnostic_category)
+        self.menu.add_category(test_category)
         
-        # Advanced category
-        advanced_category = MenuCategory("Advanced Options", prefix="[A]")
-        advanced_category.add_item(MenuItem(
-            "Installation Manager",
-            self.installation_menu,
-            description="Install/Reinstall Unbound"
+        # ===== BACKUPS =====
+        backup_category = MenuCategory("Backups", prefix="[B]")
+        backup_category.add_item(MenuItem(
+            "Create Backup",
+            self.backup_configuration_interactive,
+            description="Backup current config"
         ))
-        advanced_category.add_item(MenuItem(
+        backup_category.add_item(MenuItem(
+            "Restore Backup",
+            self.wrap_action(self.backup_manager.restore_backup),
+            description="Restore from backup"
+        ))
+        backup_category.add_item(MenuItem(
+            "Cleanup",
+            self.cleanup_backups,
+            description="Remove old backups"
+        ))
+        self.menu.add_category(backup_category)
+        
+        # ===== INSTALLATION & UPDATES =====
+        install_category = MenuCategory("Install/Update", prefix="[I]")
+        install_category.add_item(MenuItem(
+            "Update Unbound",
+            self.wrap_action(self.installer.update_unbound),
+            description="Update DNS server"
+        ))
+        install_category.add_item(MenuItem(
+            "Update Manager",
+            self.update_manager,
+            description="Update this tool"
+        ))
+        install_category.add_item(MenuItem(
+            "Fresh Install",
+            self.wrap_action(self.installer.install_unbound),
+            description="New installation"
+        ))
+        install_category.add_item(MenuItem(
+            "Fix Installation",
+            self.wrap_action(self.installer.fix_existing_installation),
+            description="Repair issues"
+        ))
+        install_category.add_item(MenuItem(
             "Regenerate Keys",
             self.wrap_action(self.dnssec_manager.generate_control_keys),
-            description="Regenerate security keys"
+            description="New control keys"
         ))
-        advanced_category.add_item(MenuItem(
-            "Update This Tool",
-            self.update_manager,
-            description="Update Unbound Manager"
-        ))
-        advanced_category.add_item(MenuItem(
-            "Uninstall Manager",
+        install_category.add_item(MenuItem(
+            "Uninstall",
             self.uninstall_manager,
-            description="Remove this tool",
+            description="Remove manager",
             style="red"
         ))
-        self.menu.add_category(advanced_category)
+        self.menu.add_category(install_category)
         
-        # Help and Exit
+        # ===== HELP & EXIT =====
         self.menu.add_item(MenuItem(
             "Help",
             self.show_help,
             prefix="[H]",
-            description="Show help information",
+            description="Help & documentation",
             key="h"
         ))
         
@@ -289,6 +289,29 @@ class UnboundManagerCLI:
         console.print("─" * 60)
         console.print("\n[dim]Press Enter to continue...[/dim]")
         input()
+
+    def view_menu(self) -> None:
+        """View menu combining status, statistics, and logs."""
+        
+        def show_stats():
+            self.troubleshooter.show_statistics()
+        
+        def show_extended():
+            self.troubleshooter.show_extended_statistics()
+        
+        def show_redis():
+            self.redis_manager.show_redis_stats()
+        
+        result = create_submenu("View", [
+            ("Service Status", self.show_detailed_status),
+            ("DNS Statistics", show_stats),
+            ("Extended Stats", show_extended),
+            ("Redis Stats", show_redis),
+            ("View Logs", self.view_logs_interactive),
+        ])
+        
+        if result == SubMenu.QUIT:
+            return False
     
     def _get_service_uptime(self, service: str) -> str:
         """Get service uptime."""
@@ -559,21 +582,22 @@ class UnboundManagerCLI:
                 "↑/↓ or j/k    Navigate menu",
                 "Enter         Select item",
                 "ESC or b      Go back",
-                "h             Show this help",
-                "q             Exit program"
+                "r             Return (in submenus)",
+                "q             Quit program"
             ]),
             ("[bold]Quick Keys:[/bold]", [
-                "s             Service control",
-                "t             Status",
-                "l             View logs",
+                "s             Services (start/stop)",
+                "v             View (status/logs)",
+                "h             Help",
                 "1-9           Quick select"
             ]),
-            ("[bold]Common Tasks:[/bold]", [
-                "Service Control    Start/stop DNS services",
-                "System Status      Check service health",
-                "View Logs          Monitor activity",
-                "Configuration      Modify settings",
-                "Diagnostics        Troubleshoot issues"
+            ("[bold]Menu Categories:[/bold]", [
+                "Services       Start/Stop/Restart DNS",
+                "View           Status, Stats, Logs",
+                "Configuration  DNS, Server, Access, Cache",
+                "Testing        Diagnostics & benchmarks",
+                "Backups        Create/Restore backups",
+                "Install/Update Unbound & Manager updates"
             ])
         ]
         
