@@ -630,26 +630,49 @@ class UnboundManagerCLI:
             return False
     
     def perform_update(self) -> None:
-        """Perform the update."""
+        """Perform the update - works for both dev and production installs."""
         console.print("\n[cyan]Updating...[/cyan]")
         
         try:
             source_dir = Path.home() / "unbound-manager"
             
+            # Check if source directory exists with git
             if source_dir.exists() and (source_dir / ".git").exists():
+                # Git repo exists, pull updates
                 with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
                     task = progress.add_task("Pulling latest changes...", total=None)
                     run_command(["git", "pull"], cwd=source_dir)
                     progress.update(task, description="Reinstalling package...")
-                    run_command(["pip3", "install", "-e", "."], cwd=source_dir)
+                    # Use regular install to ensure it works for both dev and production
+                    run_command(["pip3", "install", "."], cwd=source_dir)
                     progress.update(task, completed=True)
                 
                 print_success("Update complete! Please restart the program.")
             else:
-                console.print("[yellow]Source directory not found. Manual update required.[/yellow]")
+                # No source directory - clone it first
+                console.print("[cyan]Source directory not found. Cloning repository...[/cyan]")
+                
+                # Remove old directory if it exists but isn't a git repo
+                if source_dir.exists():
+                    import shutil
+                    shutil.rmtree(source_dir)
+                
+                with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+                    task = progress.add_task("Cloning repository...", total=None)
+                    run_command(
+                        ["git", "clone", "https://github.com/regix1/unbound-manager.git"],
+                        cwd=Path.home()
+                    )
+                    progress.update(task, description="Installing package...")
+                    run_command(["pip3", "install", "."], cwd=source_dir)
+                    progress.update(task, completed=True)
+                
+                print_success("Update complete! Please restart the program.")
                 
         except Exception as e:
             console.print(f"[red]Update failed: {e}[/red]")
+            console.print("[yellow]Try manual update:[/yellow]")
+            console.print("  cd ~/unbound-manager && git pull && pip3 install .")
     
 
     def change_dns_upstream(self) -> None:
