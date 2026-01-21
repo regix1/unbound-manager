@@ -10,8 +10,9 @@ from dataclasses import dataclass
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
+from rich.prompt import Prompt
 
-console = Console()
+from .ui import print_header, print_nav_options, pause, get_choice, console
 
 
 @dataclass
@@ -189,13 +190,11 @@ class InteractiveMenu:
                 return result
             except KeyboardInterrupt:
                 console.print("\n[yellow]Operation cancelled[/yellow]")
-                console.print("[dim]Press Enter to continue...[/dim]")
-                input()
+                pause()
                 return None
             except Exception as e:
                 console.print(f"\n[red]Error: {e}[/red]")
-                console.print("[dim]Press Enter to continue...[/dim]")
-                input()
+                pause()
                 return None
     
     def navigate_up(self) -> None:
@@ -294,8 +293,7 @@ class InteractiveMenu:
             except KeyboardInterrupt:
                 # Handle Ctrl+C gracefully
                 console.print("\n\n[yellow]Use 'q' to quit or ESC to go back[/yellow]")
-                console.print("[dim]Press Enter to continue...[/dim]")
-                input()
+                pause()
 
 
 class SimpleMenu:
@@ -311,10 +309,7 @@ class SimpleMenu:
     
     def display(self) -> None:
         """Display the menu."""
-        console.print("┌" + "─" * 58 + "┐")
-        console.print(f"│  [bold cyan]{self.title:^54}[/bold cyan]  │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
+        print_header(self.title, clear=False)
         
         for idx, (name, _, desc) in enumerate(self.items, 1):
             if desc:
@@ -392,30 +387,19 @@ class SubMenu:
     
     def display(self) -> None:
         """Display the menu."""
-        console.clear()
-        
-        # Header
-        title_centered = self.title.upper().center(54)
-        console.print("┌" + "─" * 58 + "┐")
-        console.print(f"│  [bold cyan]{title_centered}[/bold cyan]  │")
-        console.print("└" + "─" * 58 + "┘")
+        print_header(self.title)
         
         if self.description:
-            console.print(f"\n[dim]{self.description}[/dim]")
-        
-        console.print()
+            console.print(f"[dim]{self.description}[/dim]")
+            console.print()
         
         # Options
         for i, (label, action, key) in enumerate(self.options, 1):
             key_hint = f" ({key})" if key else ""
             console.print(f"  [{i}] {label}{key_hint}")
         
-        # Separator and navigation options
         console.print()
-        console.print("  ─" * 20)
-        console.print("  [r] Return to menu")
-        console.print("  [q] Quit")
-        console.print()
+        print_nav_options()
     
     def run(self):
         """Run the menu and handle selection.
@@ -437,8 +421,7 @@ class SubMenu:
                 if key:
                     valid.append(key.lower())
             
-            from rich.prompt import Prompt
-            choice = Prompt.ask("Select", choices=valid, default="r", show_choices=False)
+            choice = get_choice("Select", valid)
             
             # Handle navigation
             if choice.lower() == "q":
@@ -461,17 +444,14 @@ class SubMenu:
                         console.clear()
                         try:
                             result = action()
-                            console.print("\n[dim]Press Enter to continue...[/dim]")
-                            input()
+                            pause()
                             return result
                         except KeyboardInterrupt:
                             console.print("\n[yellow]Cancelled[/yellow]")
-                            console.print("[dim]Press Enter to continue...[/dim]")
-                            input()
+                            pause()
                         except Exception as e:
                             console.print(f"\n[red]Error: {e}[/red]")
-                            console.print("[dim]Press Enter to continue...[/dim]")
-                            input()
+                            pause()
             
             # Invalid choice - loop again
 

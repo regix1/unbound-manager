@@ -28,8 +28,7 @@ from .config_manager import ConfigManager
 from .redis_manager import RedisManager
 from .dnssec import DNSSECManager
 from .menu_system import SubMenu
-
-console = Console()
+from .ui import print_header, pause, print_success, print_warning, print_nav_options, get_choice, console
 
 
 class UnboundInstaller:
@@ -65,23 +64,16 @@ class UnboundInstaller:
         """Let user select an Unbound version with standard navigation."""
         versions = self.get_available_versions()
         
-        console.clear()
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│          [bold cyan]SELECT UNBOUND VERSION[/bold cyan]                       │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
+        print_header("Select Unbound Version")
         
         for i, version in enumerate(versions, 1):
             console.print(f"  [{i}] {version}")
         
         console.print()
-        console.print("  ─" * 20)
-        console.print("  [r] Return to menu")
-        console.print("  [q] Quit")
-        console.print()
+        print_nav_options()
         
         valid_choices = ["r", "q"] + [str(i) for i in range(1, len(versions) + 1)]
-        choice = Prompt.ask("Select version", choices=valid_choices, default="r", show_choices=False)
+        choice = get_choice("Select version", valid_choices)
         
         if choice == "q":
             return SubMenu.QUIT
@@ -89,7 +81,7 @@ class UnboundInstaller:
             return SubMenu.RETURN
         
         selected = versions[int(choice) - 1]
-        console.print(f"[green]✓[/green] Selected Unbound version: [bold]{selected}[/bold]")
+        print_success(f"Selected Unbound version: {selected}")
         return selected
     
     def install_dependencies(self) -> bool:
@@ -129,7 +121,7 @@ class UnboundInstaller:
                 console.print("[red]Failed to install dependencies[/red]")
                 return False
         
-        console.print("[green]✓[/green] Dependencies installed")
+        print_success("Dependencies installed")
         return True
     
     def compile_unbound(self, version: str) -> bool:
@@ -224,7 +216,7 @@ class UnboundInstaller:
                 console.print(f"[red]Installation failed: {e}[/red]")
                 return False
             
-            console.print("[green]✓[/green] Unbound compiled and installed successfully")
+            print_success("Unbound compiled and installed successfully")
             return True
     
     def update_unbound(self) -> None:
@@ -252,6 +244,12 @@ class UnboundInstaller:
         
         # Select new version
         version = self.select_version()
+        
+        # Handle return/quit from submenu
+        if version == SubMenu.QUIT:
+            return False
+        if version == SubMenu.RETURN:
+            return
         
         # Check if same version
         if current_version and version in current_version:
@@ -295,7 +293,7 @@ class UnboundInstaller:
                             progress.update(task, advance=len(chunk))
                 
                 download_successful = True
-                console.print("[green]✓[/green] Download successful")
+                print_success("Download successful")
                 
             except Exception as e:
                 console.print(f"[yellow]Download with requests failed: {e}[/yellow]")
@@ -309,7 +307,7 @@ class UnboundInstaller:
                 )
                 if result.returncode == 0:
                     download_successful = True
-                    console.print("[green]✓[/green] Download successful with wget")
+                    print_success("Download successful with wget")
                 else:
                     # Try method 3: curl
                     console.print("[cyan]Trying curl...[/cyan]")
@@ -320,7 +318,7 @@ class UnboundInstaller:
                     )
                     if result.returncode == 0:
                         download_successful = True
-                        console.print("[green]✓[/green] Download successful with curl")
+                        print_success("Download successful with curl")
             
             if not download_successful:
                 console.print("[red]Failed to download Unbound source[/red]")
@@ -357,7 +355,7 @@ class UnboundInstaller:
             ]
             
             run_command(configure_args, cwd=source_dir, timeout=120)
-            console.print("[green]✓[/green] Configuration successful")
+            print_success("Configuration successful")
             
             # Compile
             console.print("[cyan]Compiling Unbound (this may take several minutes)...[/cyan]")
@@ -372,7 +370,7 @@ class UnboundInstaller:
                 run_command(["make", f"-j{cpu_count}"], cwd=source_dir, timeout=600)
                 progress.update(task, completed=True)
             
-            console.print("[green]✓[/green] Compilation successful")
+            print_success("Compilation successful")
             compilation_successful = True
             
             # NOW stop Unbound for the quick install
@@ -383,7 +381,7 @@ class UnboundInstaller:
             console.print("[cyan]Installing new Unbound version...[/cyan]")
             run_command(["make", "install"], cwd=source_dir)
             run_command(["ldconfig"])
-            console.print("[green]✓[/green] Installation successful")
+            print_success("Installation successful")
             
             # Clean up temp directory
             shutil.rmtree(temp_dir)
@@ -397,7 +395,7 @@ class UnboundInstaller:
             
             # Verify service is running
             if check_service_status(UNBOUND_SERVICE):
-                console.print("[green]✓[/green] Unbound service started successfully")
+                print_success("Unbound service started successfully")
                 
                 # Test DNS resolution
                 test_result = run_command(
@@ -406,18 +404,18 @@ class UnboundInstaller:
                     timeout=5
                 )
                 if test_result.returncode == 0 and test_result.stdout.strip():
-                    console.print("[green]✓[/green] DNS resolution working")
+                    print_success("DNS resolution working")
                     
                     # Show new version
                     try:
                         result = run_command(["unbound", "-V"], check=False)
                         if result.returncode == 0:
                             new_version = result.stdout.split()[1]
-                            console.print(f"[green]✓[/green] Successfully updated to version: [bold]{new_version}[/bold]")
+                            print_success(f"Successfully updated to version: {new_version}")
                     except Exception:
                         pass
                 else:
-                    console.print("[yellow]⚠[/yellow] DNS resolution test failed")
+                    print_warning("DNS resolution test failed")
             else:
                 console.print("[red]Unbound service failed to start[/red]")
                 raise Exception("Service failed to start after update")
@@ -436,7 +434,7 @@ class UnboundInstaller:
             console.print("[yellow]Restoring from backup...[/yellow]")
             backup_manager.restore_specific_backup(backup_path)
             run_command(["systemctl", "start", UNBOUND_SERVICE])
-            console.print("[green]✓[/green] Restored from backup")
+            print_success("Restored from backup")
     
     def setup_directories(self) -> None:
         """Create necessary directories with proper permissions."""
@@ -447,7 +445,7 @@ class UnboundInstaller:
         ensure_directory(UNBOUND_DIR / "backups")
         ensure_directory(Path("/var/lib/unbound"))
         
-        console.print("[green]✓[/green] Directories created")
+        print_success("Directories created")
     
     def create_systemd_service(self) -> None:
         """Create systemd service file."""
@@ -460,7 +458,7 @@ class UnboundInstaller:
         )
         
         run_command(["systemctl", "daemon-reload"])
-        console.print("[green]✓[/green] Systemd service created")
+        print_success("Systemd service created")
     
     def install_unbound(self) -> None:
         """Perform fresh Unbound installation."""
@@ -492,6 +490,12 @@ class UnboundInstaller:
         # Select version
         version = self.select_version()
         
+        # Handle return/quit from submenu
+        if version == SubMenu.QUIT:
+            return False
+        if version == SubMenu.RETURN:
+            return
+        
         # Compile and install
         if not self.compile_unbound(version):
             console.print("[red]Installation failed: Could not compile Unbound[/red]")
@@ -516,6 +520,13 @@ class UnboundInstaller:
         # Select and configure DNS upstream provider
         console.print()
         dns_provider = self.config_manager.select_dns_upstream()
+        
+        # Handle return/quit from submenu
+        if dns_provider == SubMenu.QUIT:
+            return False
+        if dns_provider == SubMenu.RETURN:
+            return
+        
         self.config_manager.create_forwarding_config(dns_provider)
         
         # Setup DNSSEC
@@ -612,7 +623,7 @@ class UnboundInstaller:
         run_command(["systemctl", "restart", REDIS_SERVICE])
         run_command(["systemctl", "restart", UNBOUND_SERVICE])
         
-        console.print("[green]✓[/green] Installation fixes applied")
+        print_success("Installation fixes applied")
         
         # Run diagnostics
         from .troubleshooter import Troubleshooter

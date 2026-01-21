@@ -22,6 +22,7 @@ from rich.text import Text
 from .constants import UNBOUND_DIR, UNBOUND_CONF, UNBOUND_CONF_D, DEFAULT_CONFIG
 from .utils import set_file_permissions, ensure_directory, prompt_yes_no, get_server_ip
 from .menu_system import SubMenu, create_submenu
+from .ui import print_header, pause, print_success, print_error, print_nav_options, get_choice
 
 console = Console()
 
@@ -286,7 +287,7 @@ class ConfigManager:
                 # Backup current config
                 backup_path = file_path.with_suffix(f'.conf.backup.{int(time.time())}')
                 shutil.copy2(file_path, backup_path)
-                console.print(f"[green]✓[/green] Backup created: {backup_path.name}")
+                print_success(f"Backup created: {backup_path.name}")
                 
                 # Apply changes
                 new_content = content
@@ -306,7 +307,7 @@ class ConfigManager:
                     f.write(new_content)
                 
                 set_file_permissions(file_path)
-                console.print("[green]✓[/green] Configuration updated successfully")
+                print_success("Configuration updated successfully")
                 
                 # Validate configuration
                 self.validate_configuration()
@@ -320,7 +321,7 @@ class ConfigManager:
         # Create backup before editing
         backup_path = file_path.with_suffix(f'.conf.backup.{int(time.time())}')
         shutil.copy2(file_path, backup_path)
-        console.print(f"[green]✓[/green] Backup created: {backup_path.name}")
+        print_success(f"Backup created: {backup_path.name}")
         
         # Check if editor is available
         editor_check = subprocess.run(["which", editor], capture_output=True, text=True)
@@ -365,11 +366,7 @@ class ConfigManager:
                             current_rules.append((parts[0], parts[1]))
         
         # Display current rules
-        console.clear()
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│           [bold cyan]ACCESS CONTROL RULES[/bold cyan]                        │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
+        print_header("Access Control Rules")
         
         if current_rules:
             table = Table(show_header=True, header_style="bold magenta", box=None)
@@ -417,12 +414,9 @@ class ConfigManager:
         console.print("  [2] Remove Rule")
         console.print("  [3] Reset Defaults")
         console.print()
-        console.print("  ─" * 20)
-        console.print("  [r] Return to menu")
-        console.print("  [q] Quit")
-        console.print()
+        print_nav_options()
         
-        choice = Prompt.ask("Select", choices=["1", "2", "3", "r", "q"], default="r", show_choices=False)
+        choice = get_choice("Select", ["1", "2", "3", "r", "q"])
         
         if choice == "q":
             return False
@@ -478,7 +472,7 @@ class ConfigManager:
         with open(server_conf, 'w') as f:
             f.writelines(new_lines)
         
-        console.print("[green]✓[/green] Access control rules updated")
+        print_success("Access control rules updated")
         self.validate_configuration()
     
     def create_main_config(self) -> None:
@@ -491,7 +485,7 @@ class ConfigManager:
             {"version": "2.0.0"}
         )
         
-        console.print("[green]✓[/green] Main configuration created")
+        print_success("Main configuration created")
     
     def create_server_config(self, server_ip: str) -> None:
         """Create server configuration."""
@@ -507,7 +501,7 @@ class ConfigManager:
         )
         
         self.save_config(config)
-        console.print("[green]✓[/green] Server configuration created")
+        print_success("Server configuration created")
     
     def create_control_config(self) -> None:
         """Create remote control configuration."""
@@ -519,7 +513,7 @@ class ConfigManager:
             {}
         )
         
-        console.print("[green]✓[/green] Control configuration created")
+        print_success("Control configuration created")
     
     def create_dnssec_config(self) -> None:
         """Create DNSSEC configuration."""
@@ -531,7 +525,7 @@ class ConfigManager:
             {}
         )
         
-        console.print("[green]✓[/green] DNSSEC configuration created")
+        print_success("DNSSEC configuration created")
     
     def create_redis_config(self) -> None:
         """Create Redis cachedb configuration."""
@@ -543,7 +537,7 @@ class ConfigManager:
             {}
         )
         
-        console.print("[green]✓[/green] Redis configuration created")
+        print_success("Redis configuration created")
     
     def create_root_hints_config(self) -> None:
         """Create root hints configuration."""
@@ -555,7 +549,7 @@ class ConfigManager:
             {}
         )
         
-        console.print("[green]✓[/green] Root hints configuration created")
+        print_success("Root hints configuration created")
     
     def create_full_configuration(self, server_ip: str) -> None:
         """Create all configuration files."""
@@ -568,7 +562,7 @@ class ConfigManager:
         self.create_redis_config()
         self.create_root_hints_config()
         
-        console.print("[green]✓[/green] Full configuration created")
+        print_success("Full configuration created")
     
     def validate_configuration(self) -> bool:
         """Validate Unbound configuration."""
@@ -579,10 +573,10 @@ class ConfigManager:
         try:
             result = run_command(["unbound-checkconf"], check=False)
             if result.returncode == 0:
-                console.print("[green]✓[/green] Configuration is valid")
+                print_success("Configuration is valid")
                 return True
             else:
-                console.print("[red]✗[/red] Configuration is invalid")
+                print_error("Configuration is invalid")
                 if result.stderr:
                     console.print(f"[red]{result.stderr}[/red]")
                 return False
@@ -639,7 +633,7 @@ class ConfigManager:
         # Recreate configuration
         self.create_full_configuration(server_ip)
         
-        console.print("[green]✓[/green] Configuration reset to defaults")
+        print_success("Configuration reset to defaults")
     
     def fix_permissions(self) -> None:
         """Fix configuration file permissions."""
@@ -660,18 +654,14 @@ class ConfigManager:
         for pem_file in UNBOUND_DIR.glob("*.pem"):
             set_file_permissions(pem_file, mode=0o640)
         
-        console.print("[green]✓[/green] Permissions fixed")
+        print_success("Permissions fixed")
 
     
     def select_dns_upstream(self) -> dict:
         """Interactive DNS upstream provider selection with standard navigation."""
         from .constants import DNS_PROVIDERS, DNS_PROVIDER_ORDER
         
-        console.clear()
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│           [bold cyan]SELECT DNS PROVIDER[/bold cyan]                         │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
+        print_header("Select DNS Provider")
         console.print("[dim]Encrypted (DoT) = Protected from eavesdropping[/dim]")
         console.print("[dim]Unencrypted = Faster but visible to ISP[/dim]")
         console.print()
@@ -691,14 +681,11 @@ class ConfigManager:
         
         console.print(table)
         console.print()
-        console.print("  ─" * 20)
-        console.print("  [r] Return to menu")
-        console.print("  [q] Quit")
-        console.print()
+        print_nav_options()
         
         # Get selection
         valid_choices = ["r", "q"] + [str(i) for i in range(1, len(DNS_PROVIDER_ORDER) + 1)]
-        choice = Prompt.ask("Select provider", choices=valid_choices, default="r", show_choices=False)
+        choice = get_choice("Select provider", valid_choices)
         
         if choice == "q":
             return SubMenu.QUIT
@@ -713,7 +700,7 @@ class ConfigManager:
         if selected_key == "custom_unencrypted":
             selected_provider = self._configure_custom_dns()
         
-        console.print(f"\n[green]✓[/green] Selected: [bold]{selected_provider['name']}[/bold]")
+        print_success(f"Selected: {selected_provider['name']}")
         
         if selected_provider.get("encrypted"):
             console.print("[green]  DNS queries will be encrypted (DNS-over-TLS)[/green]")
@@ -756,9 +743,9 @@ class ConfigManager:
         if provider.get("key") == "none" or not provider.get("servers"):
             if forward_conf.exists():
                 forward_conf.unlink()
-                console.print("[green]✓[/green] Configured for full recursion (no forwarding)")
+                print_success("Configured for full recursion (no forwarding)")
             else:
-                console.print("[green]✓[/green] Using full recursion (no forwarding)")
+                print_success("Using full recursion (no forwarding)")
             return
         
         # Build forwarding configuration
@@ -802,7 +789,7 @@ class ConfigManager:
             f.write(content)
         
         set_file_permissions(forward_conf)
-        console.print(f"[green]✓[/green] Forwarding configuration created: {forward_conf.name}")
+        print_success(f"Forwarding configuration created: {forward_conf.name}")
     
     def show_current_dns_config(self) -> None:
         """Display current DNS forwarding configuration."""

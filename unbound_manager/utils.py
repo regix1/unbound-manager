@@ -240,14 +240,6 @@ def format_bytes(bytes_value: int) -> str:
     return f"{bytes_value:.2f} PB"
 
 
-def print_header(title: str, width: int = 58) -> None:
-    """Print a consistent ASCII header for CLI screens."""
-    console.print("┌" + "─" * width + "┐")
-    console.print(f"│  [bold cyan]{title:^{width-4}}[/bold cyan]  │")
-    console.print("└" + "─" * width + "┘")
-    console.print()
-
-
 def parse_unbound_stats(raw: str) -> Dict[str, str]:
     """Parse unbound-control stats output into a dictionary."""
     stats: Dict[str, str] = {}

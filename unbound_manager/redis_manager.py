@@ -5,7 +5,6 @@ from __future__ import annotations
 import time
 from pathlib import Path
 from typing import Optional
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
@@ -14,8 +13,7 @@ from .utils import (
     run_command, check_service_status, restart_service,
     check_package_installed, install_packages, set_file_permissions
 )
-
-console = Console()
+from .ui import print_success, print_error, console
 
 
 class RedisManager:
@@ -84,14 +82,14 @@ class RedisManager:
         # Restart Redis
         console.print("[cyan]Restarting Redis service...[/cyan]")
         if restart_service(REDIS_SERVICE):
-            console.print("[green]✓[/green] Redis service restarted")
+            print_success("Redis service restarted")
         else:
             console.print("[red]Failed to restart Redis[/red]")
             return False
         
         # Test Redis connection
         if self.test_redis_connection():
-            console.print("[green]✓[/green] Redis configured successfully")
+            print_success("Redis configured successfully")
             return True
         else:
             console.print("[red]Redis configuration failed[/red]")
@@ -119,10 +117,10 @@ class RedisManager:
             )
             
             if result.returncode == 0 and "PONG" in result.stdout:
-                console.print("[green]✓[/green] Redis connection successful")
+                print_success("Redis connection successful")
                 return True
             else:
-                console.print("[red]✗[/red] Redis connection failed")
+                print_error("Redis connection failed")
                 return False
         except Exception as e:
             console.print(f"[red]Error testing Redis: {e}[/red]")
@@ -201,7 +199,7 @@ class RedisManager:
             )
             
             if result.returncode == 0:
-                console.print("[green]✓[/green] Redis cache cleared")
+                print_success("Redis cache cleared")
             else:
                 console.print("[red]Failed to clear cache[/red]")
         except Exception as e:
@@ -229,7 +227,7 @@ class RedisManager:
         
         # Test connection
         if self.test_redis_connection():
-            console.print("[green]✓[/green] Redis integration fixed")
+            print_success("Redis integration fixed")
         else:
             console.print("[red]Could not fix Redis integration[/red]")
             console.print("[yellow]Try running troubleshooting for more details[/yellow]")

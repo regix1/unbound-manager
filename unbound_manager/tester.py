@@ -5,15 +5,13 @@ from __future__ import annotations
 import time
 import statistics
 from typing import List, Tuple, Optional
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .constants import TEST_DOMAINS, UNBOUND_SERVICE
 from .utils import run_command, check_service_status
-
-console = Console()
+from .ui import print_success, print_error, print_warning, print_info, console
 
 
 class UnboundTester:
@@ -21,31 +19,31 @@ class UnboundTester:
     
     def verify_installation(self) -> bool:
         """Quick verification of Unbound installation."""
-        console.print("[cyan]Verifying Unbound installation...[/cyan]")
+        print_info("Verifying Unbound installation...")
         
         # Check if unbound is installed
         try:
             result = run_command(["which", "unbound"], check=False)
             if result.returncode != 0:
-                console.print("[red]✗[/red] Unbound is not installed")
+                print_error("Unbound is not installed")
                 return False
         except Exception:
-            console.print("[red]✗[/red] Unbound is not installed")
+            print_error("Unbound is not installed")
             return False
         
         # Check configuration
         try:
             result = run_command(["unbound-checkconf"], check=False)
             if result.returncode != 0:
-                console.print("[red]✗[/red] Configuration is invalid")
+                print_error("Configuration is invalid")
                 return False
         except Exception:
-            console.print("[red]✗[/red] Could not validate configuration")
+            print_error("Could not validate configuration")
             return False
         
         # Check service
         if not check_service_status(UNBOUND_SERVICE):
-            console.print("[red]✗[/red] Unbound service is not running")
+            print_error("Unbound service is not running")
             return False
         
         # Test basic resolution
@@ -57,13 +55,13 @@ class UnboundTester:
             )
             
             if result.returncode == 0 and result.stdout.strip():
-                console.print("[green]✓[/green] DNS resolution working")
+                print_success("DNS resolution working")
                 return True
             else:
-                console.print("[red]✗[/red] DNS resolution not working")
+                print_error("DNS resolution not working")
                 return False
         except Exception:
-            console.print("[red]✗[/red] DNS resolution test failed")
+            print_error("DNS resolution test failed")
             return False
     
     def test_dns_resolution(self) -> None:
@@ -130,7 +128,7 @@ class UnboundTester:
         ))
         
         # Test positive validation
-        console.print("[cyan]Testing DNSSEC-signed domain (iana.org)...[/cyan]")
+        print_info("Testing DNSSEC-signed domain (iana.org)...")
         
         try:
             result = run_command(
@@ -146,17 +144,17 @@ class UnboundTester:
                 )
                 
                 if "flags:" in result_full.stdout and "ad" in result_full.stdout:
-                    console.print("[green]✓[/green] DNSSEC validation successful (AD flag present)")
+                    print_success("DNSSEC validation successful (AD flag present)")
                 else:
-                    console.print("[yellow]⚠[/yellow] DNSSEC validation unclear (AD flag not detected)")
+                    print_warning("DNSSEC validation unclear (AD flag not detected)")
             else:
-                console.print("[red]✗[/red] DNSSEC query failed")
+                print_error("DNSSEC query failed")
                 
         except Exception as e:
-            console.print(f"[red]✗[/red] DNSSEC test error: {e}")
+            print_error(f"DNSSEC test error: {e}")
         
         # Test negative validation
-        console.print("[cyan]Testing DNSSEC-failed domain (dnssec-failed.org)...[/cyan]")
+        print_info("Testing DNSSEC-failed domain (dnssec-failed.org)...")
         
         try:
             result = run_command(
@@ -165,12 +163,12 @@ class UnboundTester:
             )
             
             if "SERVFAIL" in result.stdout:
-                console.print("[green]✓[/green] DNSSEC correctly rejected invalid signatures")
+                print_success("DNSSEC correctly rejected invalid signatures")
             else:
-                console.print("[red]✗[/red] DNSSEC did not reject invalid signatures")
+                print_error("DNSSEC did not reject invalid signatures")
                 
         except Exception as e:
-            console.print(f"[red]✗[/red] DNSSEC test error: {e}")
+            print_error(f"DNSSEC test error: {e}")
     
     def test_performance(self, iterations: int = 100) -> None:
         """Test DNS query performance."""
@@ -259,7 +257,7 @@ class UnboundTester:
         test_domain = "example.com"
         
         # Clear cache first (if Redis is configured)
-        console.print("[cyan]Clearing cache...[/cyan]")
+        print_info("Clearing cache...")
         try:
             run_command(
                 ["redis-cli", "-s", "/var/run/redis/redis.sock", "flushall"],
@@ -269,7 +267,7 @@ class UnboundTester:
             pass
         
         # First query (cache miss)
-        console.print(f"[cyan]First query to {test_domain} (cache miss)...[/cyan]")
+        print_info(f"First query to {test_domain} (cache miss)...")
         start_time = time.time()
         
         try:
@@ -284,7 +282,7 @@ class UnboundTester:
             return
         
         # Second query (should be cached)
-        console.print(f"[cyan]Second query to {test_domain} (should be cached)...[/cyan]")
+        print_info(f"Second query to {test_domain} (should be cached)...")
         start_time = time.time()
         
         try:
@@ -301,9 +299,9 @@ class UnboundTester:
         # Compare times
         if second_time < first_time:
             improvement = ((first_time - second_time) / first_time) * 100
-            console.print(f"[green]✓[/green] Cache working! Second query {improvement:.1f}% faster")
+            print_success(f"Cache working! Second query {improvement:.1f}% faster")
         else:
-            console.print("[yellow]⚠[/yellow] Cache may not be working optimally")
+            print_warning("Cache may not be working optimally")
     
     def run_all_tests(self) -> None:
         """Run all tests."""
@@ -316,10 +314,10 @@ class UnboundTester:
         # Service status
         console.print("\n[bold]1. Service Status[/bold]")
         if check_service_status(UNBOUND_SERVICE):
-            console.print("[green]✓[/green] Unbound service is running")
+            print_success("Unbound service is running")
         else:
-            console.print("[red]✗[/red] Unbound service is not running")
-            console.print("[yellow]Cannot continue with tests[/yellow]")
+            print_error("Unbound service is not running")
+            print_warning("Cannot continue with tests")
             return
         
         # DNS resolution
@@ -339,4 +337,4 @@ class UnboundTester:
         self.test_performance(50)  # Reduced for quicker testing
         
         console.print("\n" + "=" * 50)
-        console.print("[green]✓[/green] All tests completed")
+        print_success("All tests completed")

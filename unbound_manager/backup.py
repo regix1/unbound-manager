@@ -7,16 +7,12 @@ import tarfile
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
-from rich.console import Console
-from rich.panel import Panel
 from rich.table import Table
-from rich.prompt import Prompt
 
 from .constants import UNBOUND_DIR, BACKUP_DIR
 from .utils import ensure_directory, prompt_yes_no
 from .menu_system import SubMenu
-
-console = Console()
+from .ui import print_header, pause, print_success, print_warning, console
 
 
 class BackupManager:
@@ -45,7 +41,7 @@ class BackupManager:
                 if item.name != "backups":  # Don't backup the backup directory
                     tar.add(item, arcname=item.name)
         
-        console.print(f"[green]✓[/green] Backup created: {backup_path}")
+        print_success(f"Backup created: {backup_path}")
         return backup_path
     
     def list_backups(self) -> List[Path]:
@@ -55,20 +51,15 @@ class BackupManager:
     
     def restore_backup(self) -> None:
         """Interactive backup restoration with standard navigation."""
-        console.clear()
+        from .ui import print_nav_options, get_choice
         
-        # Header
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│              [bold cyan]RESTORE BACKUP[/bold cyan]                           │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
+        print_header("Restore Backup")
         
         backups = self.list_backups()
         
         if not backups:
             console.print("[yellow]No backups found[/yellow]")
-            console.print("\n[dim]Press Enter to continue...[/dim]")
-            input()
+            pause()
             return
         
         # Display available backups
@@ -86,14 +77,11 @@ class BackupManager:
         
         console.print(table)
         console.print()
-        console.print("  ─" * 20)
-        console.print("  [r] Return to menu")
-        console.print("  [q] Quit")
-        console.print()
+        print_nav_options()
         
         # Get selection
         valid_choices = ["r", "q"] + [str(i) for i in range(1, min(len(backups), 10) + 1)]
-        choice = Prompt.ask("Select backup #", choices=valid_choices, default="r", show_choices=False)
+        choice = get_choice("Select backup #", valid_choices)
         
         if choice == "q":
             return False
@@ -147,16 +135,16 @@ class BackupManager:
             config_manager = ConfigManager()
             config_manager.fix_permissions()
             
-            console.print(f"[green]✓[/green] Backup restored successfully")
+            print_success("Backup restored successfully")
             
             # Restart Unbound
             from .utils import restart_service
             from .constants import UNBOUND_SERVICE
             console.print("[cyan]Restarting Unbound service...[/cyan]")
             if restart_service(UNBOUND_SERVICE):
-                console.print("[green]✓[/green] Unbound service restarted")
+                print_success("Unbound service restarted")
             else:
-                console.print("[yellow]⚠[/yellow] Please restart Unbound manually")
+                print_warning("Please restart Unbound manually")
             
             return True
             
@@ -201,4 +189,4 @@ class BackupManager:
             console.print(f"[yellow]Removing: {backup.name}[/yellow]")
             backup.unlink()
         
-        console.print(f"[green]✓[/green] Removed {len(to_remove)} old backup(s)")
+        print_success(f"Removed {len(to_remove)} old backup(s)")

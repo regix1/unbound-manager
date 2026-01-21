@@ -20,7 +20,7 @@ from rich.align import Align
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
 from .constants import APP_VERSION, UNBOUND_SERVICE, REDIS_SERVICE
-from .utils import check_root, check_service_status, run_command, prompt_yes_no, print_header, parse_unbound_stats
+from .utils import check_root, check_service_status, run_command, prompt_yes_no, parse_unbound_stats
 from .installer import UnboundInstaller
 from .config_manager import ConfigManager
 from .redis_manager import RedisManager
@@ -29,6 +29,7 @@ from .troubleshooter import Troubleshooter
 from .tester import UnboundTester
 from .backup import BackupManager
 from .menu_system import InteractiveMenu, MenuItem, MenuCategory, SubMenu, create_submenu
+from .ui import print_header, pause, print_success, print_error, print_info, print_warning
 
 console = Console()
 
@@ -53,18 +54,14 @@ class UnboundManagerCLI:
         def wrapped():
             try:
                 result = func()
-                # Always add pause for wrapped functions
-                console.print("\n[dim]Press Enter to continue...[/dim]")
-                input()
+                pause()
                 return result
             except KeyboardInterrupt:
                 console.print("\n[yellow]Operation cancelled[/yellow]")
-                console.print("[dim]Press Enter to continue...[/dim]")
-                input()
+                pause()
             except Exception as e:
                 console.print(f"\n[red]Error: {e}[/red]")
-                console.print("[dim]Press Enter to continue...[/dim]")
-                input()
+                pause()
         return wrapped
     
     def show_banner(self) -> None:
@@ -236,13 +233,7 @@ class UnboundManagerCLI:
     
     def show_detailed_status(self) -> None:
         """Show detailed system status."""
-        console.clear()
-        
-        # Header
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│                    [bold cyan]SYSTEM STATUS[/bold cyan]                        │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
+        print_header("System Status")
         
         # Service status table
         table = Table(show_header=True, header_style="bold cyan", box=None, padding=(0, 1))
@@ -287,8 +278,7 @@ class UnboundManagerCLI:
             console.print()
         
         console.print("─" * 60)
-        console.print("\n[dim]Press Enter to continue...[/dim]")
-        input()
+        pause()
 
     def view_menu(self) -> None:
         """View menu combining status, statistics, and logs."""
@@ -405,7 +395,7 @@ class UnboundManagerCLI:
             console.print("[cyan]Starting services...[/cyan]")
             restart_service(REDIS_SERVICE)
             restart_service(UNBOUND_SERVICE)
-            console.print("[green]✓[/green] Services started")
+            print_success("Services started")
         
         def stop_all():
             console.print("[cyan]Stopping services...[/cyan]")
@@ -429,7 +419,7 @@ class UnboundManagerCLI:
         def start_unbound():
             console.print("[cyan]Starting Unbound...[/cyan]")
             restart_service(UNBOUND_SERVICE)
-            console.print("[green]✓[/green] Unbound started")
+            print_success("Unbound started")
         
         def stop_unbound():
             console.print("[cyan]Stopping Unbound...[/cyan]")
@@ -439,12 +429,12 @@ class UnboundManagerCLI:
         def restart_unbound():
             console.print("[cyan]Restarting Unbound...[/cyan]")
             restart_service(UNBOUND_SERVICE)
-            console.print("[green]✓[/green] Unbound restarted")
+            print_success("Unbound restarted")
         
         def start_redis():
             console.print("[cyan]Starting Redis...[/cyan]")
             restart_service(REDIS_SERVICE)
-            console.print("[green]✓[/green] Redis started")
+            print_success("Redis started")
         
         def stop_redis():
             console.print("[cyan]Stopping Redis...[/cyan]")
@@ -454,7 +444,7 @@ class UnboundManagerCLI:
         def restart_redis():
             console.print("[cyan]Restarting Redis...[/cyan]")
             restart_service(REDIS_SERVICE)
-            console.print("[green]✓[/green] Redis restarted")
+            print_success("Redis restarted")
         
         result = create_submenu("Advanced Service Control", [
             ("Start Unbound", start_unbound),
@@ -470,12 +460,7 @@ class UnboundManagerCLI:
     
     def backup_configuration_interactive(self) -> None:
         """Interactive backup creation."""
-        console.clear()
-        
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│                 [bold cyan]CREATE BACKUP[/bold cyan]                         │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
+        print_header("Create Backup")
         
         description = Prompt.ask(
             "Enter backup description (optional)",
@@ -492,30 +477,24 @@ class UnboundManagerCLI:
             backup_path = self.backup_manager.create_backup(description)
             progress.update(task, completed=True)
         
-        console.print(f"[green]✓[/green] Backup created: {backup_path.name}")
-        console.print("\n[dim]Press Enter to continue...[/dim]")
-        input()
+        print_success(f"Backup created: {backup_path.name}")
+        pause()
     
     def cleanup_backups(self) -> None:
         """Clean up old backups."""
-        console.clear()
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│                 [bold cyan]CLEANUP BACKUPS[/bold cyan]                       │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
+        print_header("Cleanup Backups")
         
         backups = self.backup_manager.list_backups()
         console.print(f"Found {len(backups)} backup(s)")
         
         if len(backups) > 10:
-            console.print(f"\n[yellow]You have {len(backups)} backups. Recommended to keep only 10.[/yellow]")
+            print_warning(f"You have {len(backups)} backups. Recommended to keep only 10.")
             if prompt_yes_no("Clean up old backups?", default=True):
                 self.backup_manager.cleanup_old_backups(10)
         else:
-            console.print("\n[green]No cleanup needed[/green]")
+            print_success("No cleanup needed")
         
-        console.print("\n[dim]Press Enter to continue...[/dim]")
-        input()
+        pause()
     
     def view_logs_interactive(self) -> None:
         """Interactive log viewer using standardized submenu."""
@@ -570,12 +549,7 @@ class UnboundManagerCLI:
     
     def show_help(self) -> None:
         """Show help information."""
-        console.clear()
-        
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│                      [bold cyan]HELP[/bold cyan]                              │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
+        print_header("Help")
         
         help_sections = [
             ("[bold]Navigation:[/bold]", [
@@ -610,17 +584,11 @@ class UnboundManagerCLI:
         console.print("─" * 60)
         console.print("\n[bold]Documentation:[/bold]")
         console.print("  https://github.com/regix1/unbound-manager")
-        console.print("\n[dim]Press Enter to continue...[/dim]")
-        input()
+        pause()
     
     def update_manager(self) -> None:
         """Update Unbound Manager."""
-        console.clear()
-        
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│              [bold cyan]UPDATE MANAGER[/bold cyan]                            │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
+        print_header("Update Manager")
         console.print(f"Current version: [cyan]{APP_VERSION}[/cyan]")
         
         # Quick version check
@@ -647,10 +615,10 @@ class UnboundManagerCLI:
             if update_available:
                 self.perform_update()
             else:
-                console.print("[green]Already up to date[/green]")
+                print_success("Already up to date")
         
         def force_update():
-            console.print("[yellow]Forcing update...[/yellow]")
+            print_warning("Forcing update...")
             self.perform_update()
         
         result = create_submenu("Update Manager", [
@@ -676,7 +644,7 @@ class UnboundManagerCLI:
                     run_command(["pip3", "install", "-e", "."], cwd=source_dir)
                     progress.update(task, completed=True)
                 
-                console.print("[green]✓ Update complete! Please restart the program.[/green]")
+                print_success("Update complete! Please restart the program.")
             else:
                 console.print("[yellow]Source directory not found. Manual update required.[/yellow]")
                 
@@ -686,41 +654,41 @@ class UnboundManagerCLI:
 
     def change_dns_upstream(self) -> None:
         """Change DNS upstream provider."""
-        console.clear()
-        
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│              [bold cyan]DNS UPSTREAM CONFIGURATION[/bold cyan]              │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
+        print_header("DNS Upstream Configuration")
         
         # Show current configuration
         self.config_manager.show_current_dns_config()
         console.print()
         
         if not prompt_yes_no("Change DNS upstream provider?", default=True):
-            console.print("[yellow]No changes made[/yellow]")
-            console.print("\n[dim]Press Enter to continue...[/dim]")
-            input()
+            print_warning("No changes made")
+            pause()
             return
         
         # Select new provider
         dns_provider = self.config_manager.select_dns_upstream()
         
+        # Handle return/quit from submenu
+        if dns_provider == SubMenu.QUIT:
+            return False
+        if dns_provider == SubMenu.RETURN:
+            return
+        
         # Create backup before changes
-        console.print("\n[cyan]Creating backup...[/cyan]")
+        print_info("Creating backup...")
         self.backup_manager.create_backup("before_dns_change")
         
         # Apply new configuration
         self.config_manager.create_forwarding_config(dns_provider)
         
         # Restart Unbound to apply changes
-        console.print("\n[cyan]Restarting Unbound...[/cyan]")
+        print_info("Restarting Unbound...")
         from .utils import restart_service
         if restart_service(UNBOUND_SERVICE):
-            console.print("[green]✓[/green] Unbound restarted successfully")
+            print_success("Unbound restarted successfully")
             
             # Test DNS resolution
-            console.print("\n[cyan]Testing DNS resolution...[/cyan]")
+            print_info("Testing DNS resolution...")
             try:
                 result = run_command(
                     ["dig", "@127.0.0.1", "+short", "example.com"],
@@ -728,44 +696,38 @@ class UnboundManagerCLI:
                     timeout=10
                 )
                 if result.returncode == 0 and result.stdout.strip():
-                    console.print("[green]✓[/green] DNS resolution working!")
+                    print_success("DNS resolution working!")
                 else:
-                    console.print("[yellow]⚠[/yellow] DNS test inconclusive")
+                    print_warning("DNS test inconclusive")
             except Exception:
-                console.print("[yellow]⚠[/yellow] Could not test DNS")
+                print_warning("Could not test DNS")
         else:
-            console.print("[red]Failed to restart Unbound[/red]")
+            print_error("Failed to restart Unbound")
         
-        console.print("\n[dim]Press Enter to continue...[/dim]")
-        input()
+        pause()
 
     def uninstall_manager(self) -> None:
         """Uninstall Unbound Manager."""
-        console.clear()
-        
-        console.print("┌" + "─" * 58 + "┐")
-        console.print("│            [bold red]UNINSTALL UNBOUND MANAGER[/bold red]                  │")
-        console.print("└" + "─" * 58 + "┘")
-        console.print()
-        console.print("[yellow]Warning: This will remove the Unbound Manager tool.[/yellow]")
+        print_header("Uninstall Manager")
+        print_warning("This will remove the Unbound Manager tool.")
         console.print("Your DNS configuration will be preserved.")
         console.print()
         
         if not prompt_yes_no("Are you sure you want to uninstall?", default=False):
             return
         
-        console.print("\n[cyan]Creating backup...[/cyan]")
+        print_info("Creating backup...")
         backup_path = self.backup_manager.create_backup("before_uninstall")
-        console.print(f"[green]✓[/green] Backup saved to: {backup_path}")
+        print_success(f"Backup saved to: {backup_path}")
         
-        console.print("\n[yellow]Uninstalling...[/yellow]")
+        print_warning("Uninstalling...")
         try:
             run_command(["pip3", "uninstall", "-y", "unbound-manager"])
-            console.print("[green]✓ Unbound Manager uninstalled[/green]")
+            print_success("Unbound Manager uninstalled")
         except Exception as e:
-            console.print(f"[red]Uninstall failed: {e}[/red]")
+            print_error(f"Uninstall failed: {e}")
         
-        console.print("\n[yellow]Exiting...[/yellow]")
+        print_warning("Exiting...")
         sys.exit(0)
     
     def run(self) -> None:

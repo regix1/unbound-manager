@@ -6,15 +6,13 @@ import sys
 import time
 from pathlib import Path
 from typing import List, Dict, Any
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.syntax import Syntax
 
 from .constants import UNBOUND_DIR, UNBOUND_CONF_D, UNBOUND_SERVICE, REDIS_SERVICE
 from .utils import run_command, check_service_status, check_port_listening, format_bytes, parse_unbound_stats
-
-console = Console()
+from .ui import print_success, print_error, print_warning, print_info, console
 
 
 class Troubleshooter:
@@ -34,43 +32,43 @@ class Troubleshooter:
         console.print("\n[cyan]Checking services...[/cyan]")
         if not check_service_status(UNBOUND_SERVICE):
             issues.append("Unbound service is not running")
-            console.print("[red]✗[/red] Unbound service is not running")
+            print_error("Unbound service is not running")
         else:
-            console.print("[green]✓[/green] Unbound service is running")
+            print_success("Unbound service is running")
         
         if not check_service_status(REDIS_SERVICE):
             issues.append("Redis service is not running")
-            console.print("[yellow]⚠[/yellow] Redis service is not running")
+            print_warning("Redis service is not running")
         else:
-            console.print("[green]✓[/green] Redis service is running")
+            print_success("Redis service is running")
         
         # Check ports
         console.print("\n[cyan]Checking network ports...[/cyan]")
         if not check_port_listening(53):
             issues.append("Port 53 is not listening")
-            console.print("[red]✗[/red] Port 53 is not listening")
+            print_error("Port 53 is not listening")
         else:
-            console.print("[green]✓[/green] Port 53 is listening")
+            print_success("Port 53 is listening")
         
         if not check_port_listening(8953, "127.0.0.1"):
-            console.print("[yellow]⚠[/yellow] Control port 8953 is not listening")
+            print_warning("Control port 8953 is not listening")
         else:
-            console.print("[green]✓[/green] Control port 8953 is listening")
+            print_success("Control port 8953 is listening")
         
         # Check configuration
         console.print("\n[cyan]Checking configuration...[/cyan]")
         try:
             result = run_command(["unbound-checkconf"], check=False)
             if result.returncode == 0:
-                console.print("[green]✓[/green] Configuration is valid")
+                print_success("Configuration is valid")
             else:
                 issues.append("Configuration is invalid")
-                console.print("[red]✗[/red] Configuration is invalid")
+                print_error("Configuration is invalid")
                 if result.stderr:
                     console.print(f"[red]{result.stderr}[/red]")
         except Exception as e:
             issues.append(f"Could not check configuration: {e}")
-            console.print(f"[red]✗[/red] Could not check configuration: {e}")
+            print_error(f"Could not check configuration: {e}")
         
         # Check files
         console.print("\n[cyan]Checking required files...[/cyan]")
@@ -84,10 +82,10 @@ class Troubleshooter:
         
         for file_path, description in required_files:
             if file_path.exists():
-                console.print(f"[green]✓[/green] {description} exists")
+                print_success(f"{description} exists")
             else:
                 issues.append(f"{description} missing: {file_path}")
-                console.print(f"[red]✗[/red] {description} missing")
+                print_error(f"{description} missing")
         
         # Check permissions
         console.print("\n[cyan]Checking permissions...[/cyan]")
@@ -126,11 +124,11 @@ class Troubleshooter:
             if UNBOUND_DIR.exists():
                 stats = UNBOUND_DIR.stat()
                 if stats.st_uid != unbound_uid:
-                    console.print(f"[yellow]⚠[/yellow] {UNBOUND_DIR} not owned by unbound user")
+                    print_warning(f"{UNBOUND_DIR} not owned by unbound user")
                 else:
-                    console.print(f"[green]✓[/green] Directory ownership correct")
+                    print_success("Directory ownership correct")
         except KeyError:
-            console.print("[red]✗[/red] Unbound user does not exist")
+            print_error("Unbound user does not exist")
     
     def _test_dns_resolution(self) -> None:
         """Test DNS resolution."""
@@ -141,11 +139,11 @@ class Troubleshooter:
             )
             
             if result.returncode == 0 and result.stdout.strip():
-                console.print("[green]✓[/green] DNS resolution working")
+                print_success("DNS resolution working")
             else:
-                console.print("[red]✗[/red] DNS resolution failed")
+                print_error("DNS resolution failed")
         except Exception as e:
-            console.print(f"[red]✗[/red] Could not test DNS: {e}")
+            print_error(f"Could not test DNS: {e}")
     
     def view_logs(self, lines: int = 50) -> None:
         """View Unbound logs."""
@@ -382,11 +380,11 @@ class Troubleshooter:
                 )
                 
                 if result.returncode == 0:
-                    console.print(f"[green]✓[/green] Can reach {server}")
+                    print_success(f"Can reach {server}")
                 else:
-                    console.print(f"[red]✗[/red] Cannot reach {server}")
+                    print_error(f"Cannot reach {server}")
             except Exception:
-                console.print(f"[red]✗[/red] Cannot reach {server}")
+                print_error(f"Cannot reach {server}")
         
         # Check upstream DNS
         console.print("\n[cyan]Checking upstream DNS servers...[/cyan]")
@@ -401,8 +399,8 @@ class Troubleshooter:
                 )
                 
                 if result.returncode == 0 and result.stdout.strip():
-                    console.print(f"[green]✓[/green] {server} is reachable")
+                    print_success(f"{server} is reachable")
                 else:
-                    console.print(f"[red]✗[/red] {server} is not reachable")
+                    print_error(f"{server} is not reachable")
             except Exception:
-                console.print(f"[red]✗[/red] {server} is not reachable")
+                print_error(f"{server} is not reachable")
