@@ -60,11 +60,14 @@ class UnboundInstaller:
             # Return default versions as fallback
             return ["1.22.0", "1.21.1", "1.21.0", "1.20.0", "1.19.3"]
     
-    def select_version(self) -> str:
+    def select_version(self, current_version: str = None) -> str:
         """Let user select an Unbound version with standard navigation."""
         versions = self.get_available_versions()
         
-        print_header("Select Unbound Version")
+        if current_version:
+            print_header(f"Select Unbound Version (Current: {current_version})")
+        else:
+            print_header("Select Unbound Version")
         
         for i, version in enumerate(versions, 1):
             console.print(f"  [{i}] {version}")
@@ -243,7 +246,7 @@ class UnboundInstaller:
         backup_path = backup_manager.create_backup("before_update")
         
         # Select new version
-        version = self.select_version()
+        version = self.select_version(current_version)
         
         # Handle return/quit from submenu
         if version == SubMenu.QUIT:
