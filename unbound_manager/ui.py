@@ -34,8 +34,8 @@ def print_separator() -> None:
 def print_nav_options() -> None:
     """Print standard navigation options for submenus."""
     print_separator()
-    console.print("  [r] Return to menu")
-    console.print("  [q] Quit")
+    console.print("  [dim](r)[/dim] Return to menu")
+    console.print("  [dim](q)[/dim] Quit")
     console.print()
 
 
