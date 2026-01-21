@@ -184,14 +184,16 @@ class UnboundManagerCLI:
         # ===== INSTALLATION & UPDATES =====
         install_category = MenuCategory("Install/Update", prefix="[I]")
         install_category.add_item(MenuItem(
-            "Update Unbound",
+            "Update Unbound DNS",
             self.wrap_action(self.installer.update_unbound),
-            description="Update DNS server"
+            description="Upgrade DNS server version",
+            style="cyan"
         ))
         install_category.add_item(MenuItem(
-            "Update Manager",
+            "Update This Tool",
             self.update_manager,
-            description="Update this tool"
+            description="Pull latest manager code",
+            style="yellow"
         ))
         install_category.add_item(MenuItem(
             "Fresh Install",
