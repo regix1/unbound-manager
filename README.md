@@ -248,7 +248,6 @@ MIT License. See [LICENSE](LICENSE) for details.
 ## Links
 
 - **Issues:** https://github.com/regix1/unbound-manager/issues
-- **Discussions:** https://github.com/regix1/unbound-manager/discussions
 
 ## Credits
 
