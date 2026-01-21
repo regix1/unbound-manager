@@ -622,31 +622,44 @@ class UnboundManagerCLI:
         console.print("└" + "─" * 58 + "┘")
         console.print()
         console.print(f"Current version: [cyan]{APP_VERSION}[/cyan]")
-        console.print()
         
-        # Quick check with short timeout
+        # Quick version check
+        update_available = False
         try:
             import requests
             response = requests.get(
                 "https://raw.githubusercontent.com/regix1/unbound-manager/main/VERSION",
-                timeout=(2, 3)  # (connect timeout, read timeout)
+                timeout=(2, 3)
             )
-            
             if response.status_code == 200:
                 remote_version = response.text.strip()
                 if remote_version != APP_VERSION:
-                    console.print(f"[yellow]Update available: {remote_version}[/yellow]")
+                    console.print(f"Latest version:  [yellow]{remote_version}[/yellow]")
+                    update_available = True
                 else:
-                    console.print("[green]✓ Up to date[/green]")
+                    console.print(f"Latest version:  [green]{remote_version}[/green]")
         except Exception:
-            console.print("[dim]Could not check latest version[/dim]")
+            console.print("Latest version:  [dim]unknown[/dim]")
         
         console.print()
-        if prompt_yes_no("Pull latest from git?", default=False):
+        
+        def normal_update():
+            if update_available:
+                self.perform_update()
+            else:
+                console.print("[green]Already up to date[/green]")
+        
+        def force_update():
+            console.print("[yellow]Forcing update...[/yellow]")
             self.perform_update()
         
-        console.print("\n[dim]Press Enter to continue...[/dim]")
-        input()
+        result = create_submenu("Update Manager", [
+            ("Update", normal_update, "u"),
+            ("Force Update", force_update, "f"),
+        ], "Pull latest changes from repository")
+        
+        if result == SubMenu.QUIT:
+            return False
     
     def perform_update(self) -> None:
         """Perform the update."""
